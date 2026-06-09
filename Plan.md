@@ -7,12 +7,13 @@ _Last updated: 2026-06-09_
 Ship the reusable dotfiles repo (public, name `dotfiles`) and push to the user's GitHub.
 
 ## TODO
-- [ ] Push to GitHub (`gh repo create dotfiles --public`) — needs user to run `gh auth login` first.
+- (none — shipped)
 
 ## In Progress
-- [ ] Final commit, then push.
+- (none)
 
 ## Done
+- [x] Pushed to GitHub: https://github.com/fr0m-scratch/dotfiles (public, main, 46 files). Switched origin SSH→HTTPS after an SSH key was missing.
 - [x] Generate docs (keybindings / window-management / claude-code / shell-terminal) + README via a 5-agent workflow; all 205-315 lines, verified accurate, no leakage.
 - [x] `cheatsheet.html` via generate→critique→refine workflow; self-contained, one-accent-per-card, balanced HTML, no horizontal scroll.
 - [x] Converted cheatsheet from HLF **Bold** (dark) to HLF **Print** (warm paper #f3ede1 / near-black ink / oxblood #b81c1c accent) per user correction — token swap only, tokens-pure, footer relabeled.
