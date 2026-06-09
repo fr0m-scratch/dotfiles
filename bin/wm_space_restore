@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+cache_dir="${XDG_CACHE_HOME:-$HOME/.cache}/wm-spaces"
+space_index="$(yabai -m query --spaces --space | jq -r '.index')"
+state_file="$cache_dir/minimized-space-$space_index"
+
+if [ -s "$state_file" ]; then
+  ids_file="$state_file"
+else
+  mkdir -p "$cache_dir"
+  ids_file="$cache_dir/minimized-space-$space_index.current"
+  yabai -m query --windows --space "$space_index" |
+    jq -r '.[] | select(."is-minimized" == true) | .id' > "$ids_file"
+fi
+
+while IFS= read -r id; do
+  [ -n "$id" ] && yabai -m window --deminimize "$id" || true
+done < "$ids_file"
+
+rm -f "$state_file"

@@ -1,0 +1,5 @@
+# Git per-user configuration (templated). The installer fills in name/email,
+# or copy to ~/.gitconfig and edit the two lines below.
+[user]
+	name = __GIT_NAME__
+	email = __GIT_EMAIL__

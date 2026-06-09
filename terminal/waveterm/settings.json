@@ -1,0 +1,9 @@
+{
+  "app:tabbar": "top",
+  "autoupdate:channel": "latest",
+  "term:fontfamily": "Menlo",
+  "term:fontsize": 16,
+  "term:theme": "tokyonight",
+  "window:opacity": 0.9,
+  "window:transparent": true
+}

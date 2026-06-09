@@ -1,0 +1,133 @@
+# Enable Powerlevel10k instant prompt. Should stay close to the top of ~/.zshrc.
+# Initialization code that may require console input (password prompts, [y/n]
+# confirmations, etc.) must go above this block; everything else may go below.
+
+typeset -g POWERLEVEL9K_INSTANT_PROMPT=quiet
+if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
+  source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
+fi
+source ~/powerlevel10k/powerlevel10k.zsh-theme
+# To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
+[[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
+
+export PATH="$HOME/.local/bin:$PATH"
+export PATH="$HOME/bin:$PATH"
+
+# bun completions
+[ -s "$HOME/.bun/_bun" ] && source "$HOME/.bun/_bun"
+
+# bun
+export BUN_INSTALL="$HOME/.bun"
+export PATH="$BUN_INSTALL/bin:$PATH"
+
+# NOTE: the source machine aliased `claude` to always pass
+# --dangerously-skip-permissions. That is intentionally NOT shipped here —
+# auto-skipping permission prompts is a footgun on a fresh machine. If you
+# truly want it, add it yourself in ~/.zshrc.local:
+#   alias claude='claude --dangerously-skip-permissions'
+
+# ── Wave Terminal: open a project in a VS Code-like coding-agent layout ───────
+# `wsh` is usually injected into Wave panes, but make sure for plain logins too.
+export PATH="$HOME/Library/Application Support/waveterm/bin:$PATH"
+
+# Quick wsh shortcuts:  v <file/dir> = preview block | e <file> = editor block
+alias v="wsh view"
+alias e="wsh edit"
+
+# wave [dir]   — like `code .`: lay out the CURRENT tab as
+#   left = this shell (session slot) | middle = claude + codex | right = file tree
+#   Defaults to $PWD; `wave ~/proj` opens that dir.
+#   WAVE_AI_PANEL=1 wave .   also opens the Wave AI side panel.
+# NOTE: Wave v0.14.5 can't create a tab or set pane sizes from the CLI — press
+#   Cmd+t for a fresh tab first, then drag dividers to size the panes.
+# NOTE: the optional bottom "quota status" pane (wave-status.sh) is NOT part of
+#   this dotfiles package; if you have your own status script, point
+#   WAVE_STATUS_CMD at it and the bottom pane will be added.
+wave() {
+  emulate -L zsh
+  local dir="${1:-$PWD}"
+  [[ "$dir" == "." ]] && dir="$PWD"
+  dir="${dir/#\~/$HOME}"
+  if ! dir="$(cd "$dir" 2>/dev/null && pwd)"; then
+    print -u2 "wave: no such directory: ${1}"; return 1
+  fi
+  if [[ -z "$WAVETERM_TABID" ]]; then
+    print -u2 "wave: run this inside a Wave terminal pane (open a tab with Cmd+t first)."; return 1
+  fi
+  local tab="$WAVETERM_TABID" self="$WAVETERM_BLOCKID"
+
+  _wave_ids() { wsh blocks list --tab "$tab" --json 2>/dev/null | jq -r '.[].blockid' 2>/dev/null; }
+  # create a block by running "$@"; echo the new block id (set-diff before/after)
+  _wave_new() {
+    local before after
+    before="$(_wave_ids)"
+    "$@" >/dev/null 2>&1
+    sleep 0.4
+    after="$(_wave_ids)"
+    comm -13 <(print -r -- "$before" | sort) <(print -r -- "$after" | sort) | head -1
+  }
+
+  # The pane you ran `wave` in becomes the LEFT (session/shell) slot.
+  wsh focusblock -b "$self" >/dev/null 2>&1
+
+  local m1 m2 tree status=""
+  m1="$(_wave_new wsh run --cwd "$dir" -c 'claude')"     # middle: Claude agent
+  [[ -n "$m1" ]] && wsh focusblock -b "$m1" >/dev/null 2>&1
+  m2="$(_wave_new wsh run --cwd "$dir" -c 'codex')"      # middle: Codex agent
+  [[ -n "$m1" ]] && wsh focusblock -b "$m1" >/dev/null 2>&1
+  tree="$(_wave_new wsh view "$dir")"                    # right: file tree
+  wsh focusblock -b "$self" >/dev/null 2>&1
+  # optional bottom: a status/quota pane, only if the user supplied one
+  if [[ -n "$WAVE_STATUS_CMD" ]]; then
+    status="$(_wave_new wsh run --cwd "$dir" -c "$WAVE_STATUS_CMD")"
+  fi
+
+  if [[ "$WAVE_AI_PANEL" == "1" ]]; then
+    wsh setmeta -b tab waveai:panelopen=true  >/dev/null 2>&1
+    wsh setmeta -b tab waveai:panelwidth=560  >/dev/null 2>&1
+  fi
+
+  wsh focusblock -b "$self" >/dev/null 2>&1
+  print -r -- "wave: laid out '$dir'  (left=this  claude=${m1:-?}  codex=${m2:-?}  tree=${tree:-?}  status=${status:--})"
+  print -r -- "      Drag dividers to resize — Wave can't script exact pane sizes."
+}
+# ─────────────────────────────────────────────────────────────────────────────
+
+# ─── Wave helpers: open files/artifacts in Wave blocks via wsh ────────────────
+# wavep   <path|url>      → preview block      (files, images, dirs)
+# waveweb [-m] <file|url> → web browser block  (HTML artifacts, localhost, urls)
+#   -m = magnified.  Local paths are resolved to absolute file:// URLs.
+wavep() {
+  emulate -L zsh
+  local mag=""
+  [[ "$1" == "-m" || "$1" == "--magnified" ]] && { mag="-m"; shift; }
+  local t="${1:-.}"
+  if [[ "$t" != (http|https|file)://* ]]; then
+    t="${t:A}"                                   # absolute, symlink-resolved
+    [[ -e "$t" ]] || { print -u2 "wavep: no such path: $1"; return 1; }
+  fi
+  wsh view $mag "$t"
+}
+waveweb() {
+  emulate -L zsh
+  local mag=""
+  [[ "$1" == "-m" || "$1" == "--magnified" ]] && { mag="-m"; shift; }
+  local t="$1"
+  [[ -n "$t" ]] || { print -u2 "usage: waveweb [-m] <file.html|url>"; return 2; }
+  if [[ "$t" == (http|https|file)://* ]]; then
+    wsh web open $mag "$t"
+  elif [[ -e "$t" ]]; then
+    local abs="${t:A}"
+    wsh web open $mag "file://${abs// /%20}"     # encode spaces for file:// URL
+  else
+    print -u2 "waveweb: no such file: $t"; return 1
+  fi
+}
+# ─────────────────────────────────────────────────────────────────────────────
+
+# custom aliases
+alias cl='clear'
+alias check='history 0 | grep'
+
+# Machine-local overrides (untracked): put secrets / per-machine tweaks here.
+[[ -f ~/.zshrc.local ]] && source ~/.zshrc.local

@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+set -euo pipefail
+export PATH="/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+
+sleep 0.2
+printf '%s wm_lark\n' "$(date '+%Y-%m-%d %H:%M:%S')" >> $HOME/.local/share/wm_app_shortcuts.log 2>/dev/null || true
+
+yabai -m space --focus lark 2>/dev/null || true
+
+open -a LarkSuite || true
+
+while IFS= read -r id; do
+  [ -n "$id" ] && yabai -m window --deminimize "$id" || true
+done < <(yabai -m query --windows --space lark | jq -r '.[] | select(.app == "Lark" and ."is-minimized" == true) | .id')
+
+# 不再强制全屏:Lark 交给 yabai 正常平铺,与其他窗口共享布局。

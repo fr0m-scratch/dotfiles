@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DOTFILES — Mac Setup Cheatsheet</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,900&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* HLF "print" — newspaper of record: warm paper, near-black ink, oxblood accent */
+    --bg:#f3ede1;
+    --bg-elev:#fbf7ef;
+    --bg-deep:#e7ded0;
+    --ink:#131211;
+    --ink-soft:#4f4a42;
+    --ink-faint:#7a7468;
+    --rule:rgba(19,18,17,0.26);
+    --rule-soft:rgba(19,18,17,0.13);
+    --accent:#b81c1c;
+    --highlight:#b81c1c;
+    --font-display:'Fraunces',serif;
+    --font-body:'Source Serif 4',serif;
+    --font-mono:'JetBrains Mono',monospace;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:var(--font-body);
+    line-height:1.45;
+    padding:clamp(16px,3vw,38px);
+    max-width:1320px;
+    margin:0 auto;
+    overflow-x:hidden;
+  }
+
+  /* ── MASTHEAD ─────────────────────────────────── */
+  .masthead{
+    position:relative;
+    border-bottom:1px solid var(--rule);
+    padding-bottom:18px;
+    margin-bottom:24px;
+    overflow:hidden;
+  }
+  .ghost{
+    position:absolute;
+    top:50%;
+    right:-2px;
+    transform:translateY(-52%);
+    font-family:var(--font-display);
+    font-weight:900;
+    font-size:clamp(120px,22vw,260px);
+    line-height:0.78;
+    color:var(--accent);
+    opacity:0.12;
+    pointer-events:none;
+    user-select:none;
+    z-index:0;
+    letter-spacing:-0.04em;
+  }
+  .kicker{
+    font-family:var(--font-mono);
+    font-weight:500;
+    text-transform:uppercase;
+    letter-spacing:0.3em;
+    font-size:10px;
+    color:var(--ink-faint);
+  }
+  .masthead .kicker{color:var(--accent);position:relative;z-index:1}
+  h1.title{
+    position:relative;
+    z-index:1;
+    font-family:var(--font-display);
+    font-weight:900;
+    font-size:clamp(48px,9vw,104px);
+    line-height:0.92;
+    letter-spacing:-0.03em;
+    margin:6px 0 8px;
+  }
+  .dek{
+    position:relative;
+    z-index:1;
+    font-family:var(--font-body);
+    font-size:clamp(13px,1.6vw,15.5px);
+    color:var(--ink-soft);
+    max-width:60ch;
+    font-style:italic;
+  }
+
+  /* ── GRID ─────────────────────────────────────── */
+  .grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(300px,1fr));
+    gap:14px;
+    align-items:start;
+  }
+
+  /* ── CARD ─────────────────────────────────────── */
+  .card{
+    background:var(--bg-elev);
+    border:1px solid var(--rule-soft);
+    padding:14px 15px 15px;
+    position:relative;
+    transition:transform .22s cubic-bezier(.2,.7,.3,1),
+               box-shadow .22s cubic-bezier(.2,.7,.3,1),
+               border-color .22s cubic-bezier(.2,.7,.3,1);
+    will-change:transform;
+    opacity:0;
+    animation:rise .5s cubic-bezier(.2,.7,.3,1) forwards;
+  }
+  .card:nth-child(1){animation-delay:.02s}
+  .card:nth-child(2){animation-delay:.07s}
+  .card:nth-child(3){animation-delay:.12s}
+  .card:nth-child(4){animation-delay:.17s}
+  .card:nth-child(5){animation-delay:.22s}
+  .card:nth-child(6){animation-delay:.27s}
+  @keyframes rise{
+    from{opacity:0;transform:translateY(10px)}
+    to{opacity:1;transform:translateY(0)}
+  }
+  .card:hover{
+    transform:translate(-3px,-4px);
+    box-shadow:8px 9px 0 var(--accent);
+    border-color:var(--ink);
+  }
+
+  .card-head{
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    gap:10px;
+    padding-bottom:9px;
+    margin-bottom:9px;
+    border-bottom:1px solid var(--rule);
+  }
+  .card-head .num{
+    font-family:var(--font-mono);
+    font-size:9px;
+    letter-spacing:0.18em;
+    color:var(--ink-faint);
+    text-transform:uppercase;
+  }
+  .card-title{
+    font-family:var(--font-display);
+    font-weight:600;
+    font-size:18px;
+    line-height:1;
+    letter-spacing:-0.01em;
+  }
+  .card-head .num em{color:var(--accent);font-style:normal}
+
+  /* ── ROWS ─────────────────────────────────────── */
+  .row{
+    display:flex;
+    align-items:baseline;
+    gap:10px;
+    padding:5px 0;
+    border-bottom:1px solid var(--rule-soft);
+  }
+  .row:last-child{border-bottom:0;padding-bottom:0}
+  .keys{
+    flex:0 0 auto;
+    display:flex;
+    flex-wrap:wrap;
+    align-items:center;
+    gap:3px;
+    min-width:96px;
+    max-width:52%;
+  }
+  .act{
+    flex:1 1 auto;
+    font-family:var(--font-body);
+    font-size:13px;
+    color:var(--ink-soft);
+    text-align:right;
+    line-height:1.3;
+  }
+  .act b{color:var(--ink);font-weight:600}
+
+  kbd{
+    font-family:var(--font-mono);
+    font-weight:500;
+    font-size:10px;
+    text-transform:uppercase;
+    letter-spacing:0.06em;
+    color:var(--ink);
+    background:var(--bg-deep);
+    border:1px solid var(--rule);
+    border-radius:0;
+    padding:2px 5px;
+    line-height:1;
+    white-space:nowrap;
+  }
+  kbd.k-cmd{font-family:var(--font-mono)} /* keep cmd-like tokens mono */
+  .plus{
+    font-family:var(--font-mono);
+    font-size:9px;
+    color:var(--ink-faint);
+    padding:0 1px;
+  }
+  /* accent focus: exactly one per card */
+  .row.focus kbd{border-color:var(--accent);color:var(--highlight)}
+
+  /* ── SECTION SUB-LABEL inside a card ──────────── */
+  .sub{
+    font-family:var(--font-mono);
+    text-transform:uppercase;
+    letter-spacing:0.2em;
+    font-size:8.5px;
+    color:var(--ink-faint);
+    margin:9px 0 3px;
+    padding-top:7px;
+    border-top:1px dashed var(--rule-soft);
+  }
+  .row + .sub{margin-top:6px}
+
+  /* pill chips — the only rounded element */
+  .chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:2px}
+  .chip{
+    font-family:var(--font-mono);
+    font-size:9.5px;
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+    color:var(--ink-soft);
+    border:1px solid var(--rule);
+    border-radius:999px;
+    padding:2px 9px;
+    white-space:nowrap;
+  }
+  .chip.hot{border-color:var(--accent);color:var(--highlight)}
+
+  .note{
+    font-family:var(--font-body);
+    font-size:12px;
+    font-style:italic;
+    color:var(--ink-faint);
+    margin-top:7px;
+    line-height:1.35;
+  }
+
+  /* ── FOOTER ───────────────────────────────────── */
+  footer{
+    margin-top:24px;
+    padding-top:14px;
+    border-top:1px solid var(--rule);
+    display:flex;
+    flex-wrap:wrap;
+    justify-content:space-between;
+    gap:8px;
+    font-family:var(--font-mono);
+    font-size:9px;
+    letter-spacing:0.22em;
+    text-transform:uppercase;
+    color:var(--ink-faint);
+  }
+  footer .acc{color:var(--accent)}
+
+  /* ── NARROW ───────────────────────────────────── */
+  @media (max-width:480px){
+    .keys{max-width:46%;min-width:80px}
+    .act{font-size:12.5px}
+  }
+
+  /* ── REDUCED MOTION ───────────────────────────── */
+  @media (prefers-reduced-motion:reduce){
+    .card{opacity:1;animation:none}
+    .card,.card:hover{transition:none}
+  }
+
+  /* ── PRINT ────────────────────────────────────── */
+  @media print{
+    :root{
+      --bg:#fff;--bg-elev:#fff;--bg-deep:#fff;
+      --ink:#000;--ink-soft:#222;--ink-faint:#555;
+      --rule:#000;--rule-soft:#bbb;--accent:#000;--highlight:#000;
+    }
+    body{padding:0;color:var(--ink);max-width:none}
+    .card{opacity:1;animation:none;break-inside:avoid;border:1px solid var(--rule)}
+    .card:hover{transform:none;box-shadow:none}
+    .ghost{opacity:0.06;color:var(--ink)}
+    .grid{gap:8px;grid-template-columns:repeat(2,1fr)}
+    kbd{background:var(--bg-deep);color:var(--ink);border-color:var(--rule)}
+    .masthead .kicker,.card-head .num em,.chip.hot,.row.focus kbd,footer .acc{color:var(--ink)}
+  }
+</style>
+</head>
+<body>
+
+  <header class="masthead">
+    <div class="ghost" aria-hidden="true">00</div>
+    <div class="kicker">00 / Mac Setup Cheatsheet</div>
+    <h1 class="title">DOTFILES</h1>
+    <p class="dek">A one-card reference for the macOS rig — Karabiner system keys, yabai/skhd window mgmt, labeled Spaces, the Wave coding-agent layout, and the Claude Code governance stack.</p>
+  </header>
+
+  <main class="grid">
+
+    <!-- 1 · KEYBINDINGS (Karabiner) -->
+    <section class="card">
+      <div class="card-head">
+        <h2 class="card-title">Keybindings</h2>
+        <span class="num"><em>01</em> / Karabiner</span>
+      </div>
+
+      <div class="row focus">
+        <span class="keys"><kbd>Caps&nbsp;Lock</kbd></span>
+        <span class="act">Focus / open <b>Wave Terminal</b></span>
+      </div>
+      <div class="row">
+        <span class="keys"><kbd>⌥&nbsp;Opt</kbd><span class="plus">+</span><kbd>1</kbd><span class="plus">…</span><kbd>9</kbd></span>
+        <span class="act">→ <b>Ctrl+1…9</b> · switch macOS Desktop</span>
+      </div>
+
+      <div class="sub">App Workspaces</div>
+      <div class="row">
+        <span class="keys"><kbd>⌥</kbd><span class="plus">+</span><kbd>W</kbd></span>
+        <span class="act">WeChat <b>wm_chat</b></span>
+      </div>
+      <div class="row">
+        <span class="keys"><kbd>⌥</kbd><span class="plus">+</span><kbd>N</kbd></span>
+        <span class="act">Notion <b>wm_notion</b></span>
+      </div>
+      <div class="row">
+        <span class="keys"><kbd>⌥</kbd><span class="plus">+</span><kbd>L</kbd></span>
+        <span class="act">Lark <b>wm_lark</b></span>
+      </div>
+      <div class="row">
+        <span class="keys"><kbd>⌥</kbd><span class="plus">+</span><kbd>F</kbd></span>
+        <span class="act">Firefox · Ctrl+5 <b>wm_firefox</b></span>
+      </div>
+
+      <div class="sub">Space Tidy</div>
+      <div class="row">
+        <span class="keys"><kbd>⌥</kbd><span class="plus">+</span><kbd>M</kbd></span>
+        <span class="act">Minimize all <b>wm_space_minimize</b></span>
+      </div>
+      <div class="row">
+        <span class="keys"><kbd>⌥</kbd><span class="plus">+</span><kbd>R</kbd></span>
+        <span class="act">Restore all <b>wm_space_restore</b></span>
+      </div>
+    </section>
+
+    <!-- 2 · WINDOW MGMT (skhd / yabai) -->
+    <section class="card">
+      <div class="card-head">
+        <h2 class="card-title">Window Mgmt</h2>
+        <span class="num"><em>02</em> / skhd · yabai</span>
+      </div>
+
+      <div class="row focus">
+        <span class="keys"><kbd>⌥</kbd><span class="plus">+</span><kbd>←↓↑→</kbd></span>
+        <span class="act"><b>Focus</b> window</span>
+      </div>
+      <div class="row">
+        <span class="keys"><kbd>⇧</kbd><span class="plus">+</span><kbd>⌥</kbd><span class="plus">+</span><kbd>←↓↑→</kbd></span>
+        <span class="act"><b>Move / swap</b> window</span>
+      </div>
+      <div class="row">
+        <span class="keys"><kbd>⌃</kbd><span class="plus">+</span><kbd>⌥</kbd><span class="plus">+</span><kbd>←↓↑→</kbd></span>
+        <span class="act"><b>Resize</b> · 20px steps</span>
+      </div>
+
+      <div class="sub">Layout</div>
+      <div class="row">
+        <span class="keys"><kbd>⌥</kbd><span class="plus">+</span><kbd>E</kbd></span>
+        <span class="act"><b>bsp</b> tiling layout</span>
+      </div>
+      <div class="row">
+        <span class="keys"><kbd>⌥</kbd><span class="plus">+</span><kbd>S</kbd></span>
+        <span class="act"><b>stack</b> layout</span>
+      </div>
+      <div class="row">
+        <span class="keys"><kbd>⌥</kbd><span class="plus">+</span><kbd>F</kbd></span>
+        <span class="act">Toggle <b>fullscreen zoom</b></span>
+      </div>
+      <div class="row">
+        <span class="keys"><kbd>⌥</kbd><span class="plus">+</span><kbd>T</kbd></span>
+        <span class="act">Toggle <b>float</b></span>
+      </div>
+
+      <div class="sub">Displays &amp; Popups</div>
+      <div class="row">
+        <span class="keys"><kbd>⌥</kbd><span class="plus">+</span><kbd>D</kbd></span>
+        <span class="act">Focus <b>next display</b></span>
+      </div>
+      <div class="row">
+        <span class="keys"><kbd>⇧</kbd><span class="plus">+</span><kbd>⌥</kbd><span class="plus">+</span><kbd>D</kbd></span>
+        <span class="act">Move window to <b>next display</b></span>
+      </div>
+      <div class="row">
+        <span class="keys"><kbd>⌥</kbd><span class="plus">+</span><kbd>`</kbd></span>
+        <span class="act"><b>tmux / iTerm</b> popup</span>
+      </div>
+      <div class="row">
+        <span class="keys"><kbd>⌘</kbd><span class="plus">+</span><kbd>⌥</kbd><span class="plus">+</span><kbd>C</kbd></span>
+        <span class="act">Open <b>iTerm</b></span>
+      </div>
+    </section>
+
+    <!-- 3 · SPACES -->
+    <section class="card">
+      <div class="card-head">
+        <h2 class="card-title">Spaces</h2>
+        <span class="num"><em>03</em> / yabai labels</span>
+      </div>
+
+      <div class="row">
+        <span class="keys"><kbd>main</kbd></span>
+        <span class="act">Primary work Space</span>
+      </div>
+      <div class="row">
+        <span class="keys"><kbd>side</kbd></span>
+        <span class="act">Secondary / reference</span>
+      </div>
+      <div class="row focus">
+        <span class="keys"><kbd>chat</kbd></span>
+        <span class="act"><b>WeChat</b></span>
+      </div>
+      <div class="row">
+        <span class="keys"><kbd>notion</kbd></span>
+        <span class="act">Notion</span>
+      </div>
+      <div class="row">
+        <span class="keys"><kbd>lark</kbd></span>
+        <span class="act">Lark</span>
+      </div>
+      <div class="row">
+        <span class="keys"><kbd>firefox</kbd></span>
+        <span class="act">Firefox</span>
+      </div>
+      <div class="row">
+        <span class="keys"><kbd>side_space</kbd></span>
+        <span class="act">Auxiliary overflow</span>
+      </div>
+
+      <p class="note">Labels are addressed by yabai; the <kbd style="font-size:9px">⌥+1…9</kbd> Desktop switch routes you to them.</p>
+    </section>
+
+    <!-- 4 · CLAUDE CODE -->
+    <section class="card">
+      <div class="card-head">
+        <h2 class="card-title">Claude Code</h2>
+        <span class="num"><em>04</em> / agent stack</span>
+      </div>
+
+      <div class="sub" style="border-top:0;padding-top:0;margin-top:0">Skills &amp; Commands</div>
+      <div class="chips">
+        <span class="chip">/apple-frontend</span>
+        <span class="chip">/apple-sales-doc</span>
+        <span class="chip">/new-skill</span>
+        <span class="chip">/check</span>
+        <span class="chip">/fr0m</span>
+      </div>
+
+      <div class="sub">Hooks</div>
+      <div class="row focus">
+        <span class="keys"><kbd>fr0m-guard</kbd></span>
+        <span class="act">PreToolUse · no co-author commits, AOL append-only, confirm Principal edits</span>
+      </div>
+      <div class="row">
+        <span class="keys"><kbd>fr0m-rules</kbd></span>
+        <span class="act">UserPromptSubmit · inject standing rules when Principal.md present</span>
+      </div>
+      <div class="row">
+        <span class="keys"><kbd>ip-guard</kbd></span>
+        <span class="act">SessionStart + Prompt geofence · <b>off by default</b></span>
+      </div>
+
+      <div class="sub">Tuning</div>
+      <p class="note" style="font-style:normal;color:var(--ink-soft);font-size:12px">
+        theme <b style="color:var(--ink)">custom:blocks</b> · output style <b style="color:var(--ink)">Blocks</b> (trailing&nbsp;---) · effort <b style="color:var(--ink)">high</b> · advisor <b style="color:var(--ink)">opus</b> · fullscreen TUI · statusline <b style="color:var(--ink)">claude-hud</b> · plugins claude-hud + frontend-design.
+      </p>
+    </section>
+
+    <!-- 5 · SHELL & WAVE -->
+    <section class="card">
+      <div class="card-head">
+        <h2 class="card-title">Shell &amp; Wave</h2>
+        <span class="num"><em>05</em> / zsh · wsh</span>
+      </div>
+
+      <div class="row">
+        <span class="keys"><kbd>v</kbd></span>
+        <span class="act"><b>wsh view</b> · preview block</span>
+      </div>
+      <div class="row">
+        <span class="keys"><kbd>e</kbd></span>
+        <span class="act"><b>wsh edit</b> · editor block</span>
+      </div>
+      <div class="row">
+        <span class="keys"><kbd>cl</kbd></span>
+        <span class="act">clear</span>
+      </div>
+      <div class="row">
+        <span class="keys"><kbd>check</kbd></span>
+        <span class="act">history grep</span>
+      </div>
+
+      <div class="sub">Wave Layout</div>
+      <div class="row focus">
+        <span class="keys"><kbd>wave</kbd><span class="plus"> </span><kbd>[dir]</kbd></span>
+        <span class="act">VS Code-like layout — <b>left</b> shell / <b>mid</b> claude+codex / <b>right</b> file tree</span>
+      </div>
+      <div class="row">
+        <span class="keys"><kbd>wavep</kbd><span class="plus"> </span><kbd>-m</kbd><span class="plus"> </span><kbd>‹path›</kbd></span>
+        <span class="act">Wave <b>preview</b> block</span>
+      </div>
+      <div class="row">
+        <span class="keys"><kbd>waveweb</kbd><span class="plus"> </span><kbd>-m</kbd><span class="plus"> </span><kbd>‹file|url›</kbd></span>
+        <span class="act">Wave <b>web</b> block</span>
+      </div>
+    </section>
+
+    <!-- 6 · TOOLS & INSTALL -->
+    <section class="card">
+      <div class="card-head">
+        <h2 class="card-title">Tools &amp; Install</h2>
+        <span class="num"><em>06</em> / ~/bin · install</span>
+      </div>
+
+      <div class="sub" style="border-top:0;padding-top:0;margin-top:0">~/bin</div>
+      <div class="row">
+        <span class="keys"><kbd>api_keys</kbd></span>
+        <span class="act">Keychain-backed API key manager</span>
+      </div>
+      <div class="row">
+        <span class="keys"><kbd>wave_focus</kbd></span>
+        <span class="act">Focus the Wave window</span>
+      </div>
+      <div class="row">
+        <span class="keys"><kbd>wm_*</kbd></span>
+        <span class="act">Workspace / Space scripts</span>
+      </div>
+
+      <div class="sub">Install</div>
+      <div class="row focus">
+        <span class="keys"><kbd>./install.sh</kbd></span>
+        <span class="act">TUI · <b>1</b> Claude-only · <b>2</b> Full · <b>3</b> Dry-run</span>
+      </div>
+
+      <div class="sub">Flags</div>
+      <div class="chips">
+        <span class="chip">--full</span>
+        <span class="chip">--claude-only</span>
+        <span class="chip">--dry-run</span>
+        <span class="chip">--yes</span>
+      </div>
+    </section>
+
+  </main>
+
+  <footer>
+    <span>~/theOne/<span class="acc">dotfiles</span></span>
+    <span>HLF · Print</span>
+    <span>Karabiner · yabai · skhd · Wave · Claude&nbsp;Code</span>
+  </footer>
+
+</body>
+</html>

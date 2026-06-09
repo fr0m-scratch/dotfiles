@@ -1,0 +1,295 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+KEYCHAIN_SERVICE="codex-api-keys"
+
+NAMES=(
+  "OpenAI:OPENAI_API_KEY"
+  "Claude/Anthropic:ANTHROPIC_API_KEY"
+  "DeepSeek:DEEPSEEK_API_KEY"
+  "Notion:NOTION_API_KEY"
+  "Lark App ID:LARK_APP_ID"
+  "Lark App Secret:LARK_APP_SECRET"
+  "Fireworks:FIREWORKS_API_KEY"
+  "MiniMax:MINIMAX_API_KEY"
+  "Volcengine App ID:VOLC_APP_ID"
+  "Volcengine Access Token:VOLC_ACCESS_KEY"
+  "Volcengine Secret Key:VOLC_SECRET_KEY"
+)
+
+usage() {
+  cat <<'EOF'
+Usage:
+  api_keys set       Prompt for keys and save them to macOS Keychain
+  api_keys export    Print shell exports for saved keys
+  api_keys test      Test saved keys against lightweight API endpoints
+  api_keys list      Show which keys are saved
+  api_keys delete    Delete saved keys from macOS Keychain
+
+Recommended:
+  api_keys set
+  eval "$(api_keys export)"
+  api_keys test
+EOF
+}
+
+get_key() {
+  local env_name="$1"
+  security find-generic-password -s "$KEYCHAIN_SERVICE" -a "$env_name" -w 2>/dev/null
+}
+
+get_key_or_env() {
+  local env_name="$1"
+  local value="${!env_name:-}"
+
+  if [[ -n "$value" ]]; then
+    printf "%s" "$value"
+    return 0
+  fi
+
+  get_key "$env_name"
+}
+
+has_key() {
+  local env_name="$1"
+  security find-generic-password -s "$KEYCHAIN_SERVICE" -a "$env_name" -w >/dev/null 2>&1
+}
+
+shell_quote() {
+  local value="$1"
+  printf "'%s'" "${value//\'/\'\\\'\'}"
+}
+
+cmd_set() {
+  local item label env_name secret existing
+
+  echo "Paste each API key at the prompt. Input is hidden. Press Enter on an empty prompt to skip."
+  echo
+
+  for item in "${NAMES[@]}"; do
+    label="${item%%:*}"
+    env_name="${item##*:}"
+
+    existing=""
+    if has_key "$env_name"; then
+      existing=" [already saved; paste a new value to replace]"
+    fi
+
+    printf "%s (%s)%s: " "$label" "$env_name" "$existing" >&2
+    IFS= read -r -s secret
+    printf "\n" >&2
+
+    if [[ -z "$secret" ]]; then
+      echo "Skipped $env_name"
+      continue
+    fi
+
+    security add-generic-password \
+      -U \
+      -s "$KEYCHAIN_SERVICE" \
+      -a "$env_name" \
+      -w "$secret" >/dev/null
+
+    echo "Saved $env_name"
+  done
+}
+
+cmd_export() {
+  local item env_name value
+
+  for item in "${NAMES[@]}"; do
+    env_name="${item##*:}"
+    if value="$(get_key "$env_name")"; then
+      printf "export %s=%s\n" "$env_name" "$(shell_quote "$value")"
+    fi
+  done
+}
+
+cmd_list() {
+  local item label env_name
+
+  for item in "${NAMES[@]}"; do
+    label="${item%%:*}"
+    env_name="${item##*:}"
+    if has_key "$env_name"; then
+      printf "%-18s %s saved\n" "$label" "$env_name"
+    else
+      printf "%-18s %s missing\n" "$label" "$env_name"
+    fi
+  done
+}
+
+print_test_result() {
+  local name="$1"
+  local status="$2"
+  local detail="${3:-}"
+
+  if [[ "$status" == "200" ]]; then
+    printf "%-18s OK\n" "$name"
+  elif [[ "$status" == "MISSING" ]]; then
+    printf "%-18s MISSING\n" "$name"
+  elif [[ "$status" == "CURL_ERROR" ]]; then
+    printf "%-18s FAIL curl/network error%s\n" "$name" "${detail:+ ($detail)}"
+  else
+    printf "%-18s FAIL HTTP %s%s\n" "$name" "$status" "${detail:+ ($detail)}"
+  fi
+}
+
+http_get_bearer() {
+  local name="$1"
+  local env_name="$2"
+  local url="$3"
+  shift 3
+
+  local key status tmp curl_rc
+  if ! key="$(get_key_or_env "$env_name")" || [[ -z "$key" ]]; then
+    print_test_result "$name" "MISSING"
+    return 0
+  fi
+
+  tmp="$(mktemp)"
+  set +e
+  status="$(curl -sS -m 25 -o "$tmp" -w "%{http_code}" \
+    -H "Authorization: Bearer $key" \
+    "$@" \
+    "$url" 2>/dev/null)"
+  curl_rc=$?
+  set -e
+  rm -f "$tmp"
+
+  if [[ "$curl_rc" -ne 0 ]]; then
+    print_test_result "$name" "CURL_ERROR" "curl exit $curl_rc"
+  else
+    print_test_result "$name" "$status"
+  fi
+}
+
+http_post_json_bearer() {
+  local name="$1"
+  local env_name="$2"
+  local url="$3"
+  local data="$4"
+  shift 4
+
+  local key status tmp curl_rc
+  if ! key="$(get_key_or_env "$env_name")" || [[ -z "$key" ]]; then
+    print_test_result "$name" "MISSING"
+    return 0
+  fi
+
+  tmp="$(mktemp)"
+  set +e
+  status="$(curl -sS -m 30 -o "$tmp" -w "%{http_code}" \
+    -X POST \
+    -H "Authorization: Bearer $key" \
+    -H "Content-Type: application/json" \
+    "$@" \
+    --data "$data" \
+    "$url" 2>/dev/null)"
+  curl_rc=$?
+  set -e
+  rm -f "$tmp"
+
+  if [[ "$curl_rc" -ne 0 ]]; then
+    print_test_result "$name" "CURL_ERROR" "curl exit $curl_rc"
+  else
+    print_test_result "$name" "$status"
+  fi
+}
+
+http_get_anthropic() {
+  local key status tmp curl_rc
+  if ! key="$(get_key_or_env ANTHROPIC_API_KEY)" || [[ -z "$key" ]]; then
+    print_test_result "Claude/Anthropic" "MISSING"
+    return 0
+  fi
+
+  tmp="$(mktemp)"
+  set +e
+  status="$(curl -sS -m 25 -o "$tmp" -w "%{http_code}" \
+    -H "x-api-key: $key" \
+    -H "anthropic-version: 2023-06-01" \
+    "https://api.anthropic.com/v1/models" 2>/dev/null)"
+  curl_rc=$?
+  set -e
+  rm -f "$tmp"
+
+  if [[ "$curl_rc" -ne 0 ]]; then
+    print_test_result "Claude/Anthropic" "CURL_ERROR" "curl exit $curl_rc"
+  else
+    print_test_result "Claude/Anthropic" "$status"
+  fi
+}
+
+http_test_lark() {
+  # Lark/Feishu auth = app_id + app_secret -> tenant_access_token.
+  # Note: Lark returns HTTP 200 even for bad creds, with a non-zero "code" in the body,
+  # so we must inspect the body code, not just the HTTP status.
+  local app_id app_secret status tmp curl_rc code
+  app_id="$(get_key_or_env LARK_APP_ID || true)"
+  app_secret="$(get_key_or_env LARK_APP_SECRET || true)"
+
+  if [[ -z "$app_id" || -z "$app_secret" ]]; then
+    print_test_result "Lark" "MISSING"
+    return 0
+  fi
+
+  tmp="$(mktemp)"
+  set +e
+  status="$(curl -sS -m 25 -o "$tmp" -w "%{http_code}" \
+    -X POST -H "Content-Type: application/json" \
+    --data "{\"app_id\":\"$app_id\",\"app_secret\":\"$app_secret\"}" \
+    "${LARK_DOMAIN:-https://open.larksuite.com}/open-apis/auth/v3/tenant_access_token/internal" 2>/dev/null)"
+  curl_rc=$?
+  set -e
+
+  if [[ "$curl_rc" -ne 0 ]]; then
+    print_test_result "Lark" "CURL_ERROR" "curl exit $curl_rc"
+  elif [[ "$status" == "200" ]] && grep -q '"code"[[:space:]]*:[[:space:]]*0' "$tmp"; then
+    print_test_result "Lark" "200"
+  else
+    code="$(grep -o '"code"[[:space:]]*:[[:space:]]*[0-9]*' "$tmp" | head -1)"
+    print_test_result "Lark" "$status" "${code:-auth failed}"
+  fi
+  rm -f "$tmp"
+}
+
+cmd_test() {
+  echo "Testing saved keys. No secrets will be printed."
+
+  http_get_bearer "OpenAI" "OPENAI_API_KEY" "https://api.openai.com/v1/models"
+  http_get_anthropic
+  http_get_bearer "DeepSeek" "DEEPSEEK_API_KEY" "https://api.deepseek.com/models"
+  http_get_bearer "Notion" "NOTION_API_KEY" "https://api.notion.com/v1/users/me" \
+    -H "Notion-Version: 2026-03-11"
+  http_test_lark
+  http_get_bearer "Fireworks" "FIREWORKS_API_KEY" "https://api.fireworks.ai/inference/v1/models"
+  http_get_bearer "MiniMax" "MINIMAX_API_KEY" "https://api.minimax.io/v1/models"
+}
+
+cmd_delete() {
+  local item env_name
+
+  for item in "${NAMES[@]}"; do
+    env_name="${item##*:}"
+    if has_key "$env_name"; then
+      security delete-generic-password -s "$KEYCHAIN_SERVICE" -a "$env_name" >/dev/null
+      echo "Deleted $env_name"
+    else
+      echo "Missing $env_name"
+    fi
+  done
+}
+
+case "${1:-}" in
+  set) cmd_set ;;
+  export) cmd_export ;;
+  test) cmd_test ;;
+  list) cmd_list ;;
+  delete) cmd_delete ;;
+  -h|--help|help|"") usage ;;
+  *)
+    usage >&2
+    exit 2
+    ;;
+esac

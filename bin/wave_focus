@@ -1,0 +1,5 @@
+#!/bin/bash
+# Caps Lock -> open/focus Wave Terminal.
+# Replaces the old iTerm "new tab + focus" script (see iterm_tab_focus.bak).
+# `open -a` launches Wave if it isn't running and brings it to the front otherwise.
+open -a "Wave"

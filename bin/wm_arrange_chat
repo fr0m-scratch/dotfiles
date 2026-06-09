@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+set -euo pipefail
+export PATH="/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+
+space="chat"
+ids=()
+
+while IFS= read -r id; do
+  [ -n "$id" ] && ids+=("$id")
+done < <(yabai -m query --windows --space "$space" | jq -r '.[] | select(.app == "WeChat" and ."is-minimized" == false) | .id')
+
+count="${#ids[@]}"
+
+if [ "$count" -eq 1 ]; then
+  yabai -m window "${ids[0]}" --grid 1:1:0:0:1:1 2>/dev/null || true
+elif [ "$count" -ge 2 ]; then
+  yabai -m window "${ids[0]}" --grid 1:2:0:0:1:1 2>/dev/null || true
+  yabai -m window "${ids[1]}" --grid 1:2:1:0:1:1 2>/dev/null || true
+fi

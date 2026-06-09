@@ -1,0 +1,8 @@
+{
+  "name": "Blocks",
+  "base": "dark",
+  "overrides": {
+    "userMessageBackground": "#24283b",
+    "userMessageBackgroundHover": "#2f3449"
+  }
+}

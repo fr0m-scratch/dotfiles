@@ -1,0 +1,11 @@
+# machine-local / secrets — never commit
+*.local
+.zshrc.local
+.dotfiles-backup/
+# the real geofence list lives outside the repo
+claude/scripts/blocked-countries.sh
+# os cruft
+.DS_Store
+
+# personal append-only build log (local only; embeds local paths)
+/AOL.md

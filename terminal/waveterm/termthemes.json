@@ -1,0 +1,28 @@
+{
+  "tokyonight": {
+    "display:name": "Tokyo Night (from iTerm2)",
+    "display:order": 0,
+    "black": "#2a2734",
+    "red": "#e2514e",
+    "green": "#00bcdb",
+    "yellow": "#e1c381",
+    "blue": "#5334b2",
+    "magenta": "#e69f51",
+    "cyan": "#2ab7e7",
+    "white": "#9b84ee",
+    "brightBlack": "#454159",
+    "brightRed": "#e2514e",
+    "brightGreen": "#4ef4df",
+    "brightYellow": "#e1c381",
+    "brightBlue": "#7b64c3",
+    "brightMagenta": "#e69f51",
+    "brightCyan": "#24d5f8",
+    "brightWhite": "#eeebff",
+    "gray": "#565f89",
+    "cmdtext": "#bbc6f6",
+    "foreground": "#bbc6f6",
+    "background": "#1a1b27",
+    "cursor": "#b2b2b2",
+    "selectionBackground": "#454159"
+  }
+}
