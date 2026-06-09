@@ -14,7 +14,14 @@ Ship the reusable dotfiles repo (public, name `dotfiles`) and push to the user's
 
 ## Done
 - [x] Pushed to GitHub: https://github.com/fr0m-scratch/dotfiles (public, main, 46 files). Switched origin SSH→HTTPS after an SSH key was missing.
-- [x] Added README "How I actually work (the philosophy)" section: fr0m as the core (4-doc governance), hooks enforce discipline automatically, /check = show-me, Claude's place in the day (wave cockpit), keyboard-first desktop philosophy. Non-technical, worldview-first.
+- [x] Added README "How I actually work (the philosophy)" section (later moved out — see below).
+
+## Requirement Change Log (continued)
+- 2026-06-09: Revert the inline README philosophy section; instead create a standalone "说明"
+  in TWO versions (English `docs/how-i-work.md` + 中文 `docs/how-i-work.zh.md`), link both from
+  the README, and give `cheatsheet.html` a clear entry/link in the main README. — DONE: README
+  restored to the reference version + a "Start here · 从这里开始" table linking both 说明 versions
+  and the cheatsheet; both docs cross-link each other + the cheatsheet.
 - [x] Generate docs (keybindings / window-management / claude-code / shell-terminal) + README via a 5-agent workflow; all 205-315 lines, verified accurate, no leakage.
 - [x] `cheatsheet.html` via generate→critique→refine workflow; self-contained, one-accent-per-card, balanced HTML, no horizontal scroll.
 - [x] Converted cheatsheet from HLF **Bold** (dark) to HLF **Print** (warm paper #f3ede1 / near-black ink / oxblood #b81c1c accent) per user correction — token swap only, tokens-pure, footer relabeled.
