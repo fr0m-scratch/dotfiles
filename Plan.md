@@ -61,3 +61,7 @@ Lark/飞书 + Notion read setup from `plantcore/sources` into `sources/`.
   (mcp.json + agents + extractor), wired `install.sh` (link_sources + register_sources_mcp via
   `claude mcp add-json -s user`), registered + health-checked both servers live (✔ Connected),
   and updated README + `docs/sources.md` + cheatsheet (new card 07) + Plan. No secrets committed.
+- 2026-06-19: Follow-up — surface the Lark + Notion intake in the two reader-facing docs:
+  `docs/claude-code.md` (new §6 + install bullet) and `docs/how-i-work.md` + `.zh.md` (a
+  parallel "Claude reads from where my work lives / 直接读我工作真正所在的地方" section).
+  Then push.

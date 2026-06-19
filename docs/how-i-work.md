@@ -65,6 +65,19 @@ not a website I visit.
 
 ---
 
+## Claude reads from where my work lives
+
+My real context doesn't live in the repo — it lives in **Lark/飞书 and Notion**. So I let Claude
+read it directly instead of copy-pasting: the Notion and Lark tools are wired into **every**
+session, and a local-cache reader pulls Notion pages straight out of the desktop app — no API
+hoops, no "share this page first." Two small source agents do the fetching — they pull read-only,
+clean the content into Markdown, and stamp it **reference-only**, so material I *gathered* never
+gets confused with what I *decided*. The keys for all this never touch the repo; they sit in the
+macOS Keychain and the tooling fetches them at launch. The point is the same as everywhere else:
+let Claude work with my actual material, but keep the boundary sharp and the secrets put.
+
+---
+
 ## The keyboard is the command surface
 
 The desktop is arranged so I never hunt for a window — **one key, one place, muscle memory:**

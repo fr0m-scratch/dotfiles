@@ -29,6 +29,7 @@ What the installer does for Claude Code (`link_claude` + `collect_claude_deps`):
   - `claude/output-styles/*` → `~/.claude/output-styles/*`
   - `claude/themes/*` → `~/.claude/themes/*`
 - **Plugins** (`claude-hud`, `frontend-design`) are *not* downloaded by the installer — they are declared in `settings.json` and fetched from their marketplaces on the first `claude` launch (see §1).
+- **Information intake — Lark + Notion** (`link_sources` + `register_sources_mcp`, both profiles): symlinks the two source subagents (`@notion-agent`, `@lark-agent`) into `~/.claude/agents/` and the Notion local-cache reader into `~/bin/notion-extract`, then registers the Notion + Lark MCP servers at **user scope** so they load in every session. See §6 and [`sources.md`](sources.md).
 
 ---
 
@@ -225,5 +226,25 @@ It writes `./.check/<slug>.html` (inline `<style>`, UTF-8, no network/CDN deps, 
 ```text
 /fr0m <project goal and key restrictions>
 ```
+
+---
+
+## 6. Information intake — Lark / 飞书 + Notion
+
+`sources/` 把「Claude 怎么读飞书 / Notion」整理成一套可复现的能力：两个子代理、一份 Keychain 自取钥匙的 MCP 配置、以及一个 Notion 本地缓存提取器。凭据只在 macOS Keychain 里（`api_keys`），仓库里**零密钥**。完整说明 + 排错见 [`sources.md`](sources.md)。
+
+What the installer wires (`link_sources` + `register_sources_mcp`, run in **both** profiles):
+
+- **Global MCP (always-on).** `sources/mcp.json` defines the Notion + Lark servers; each launch command self-runs `eval "$(api_keys export)"` to pull credentials from the Keychain, then execs the real MCP server (`@notionhq/notion-mcp-server`, `@larksuiteoapi/lark-mcp`). The installer registers both at **user scope** (`claude mcp add-json … -s user`), so `mcp__notion__*` / `mcp__lark__*` load in every session — verify with `claude mcp list` (both should report ✔ Connected). No secret is ever written to disk; the registration lands in machine-local `~/.claude.json`, which is **not** committed.
+- **Subagents.** `sources/{notion,lark}/agent.md` → `~/.claude/agents/` as `@notion-agent` / `@lark-agent`. Each is read-first, normalizes content to Markdown, attaches provenance frontmatter, and writes **reference-only** output. They declare `disallowedTools: [Edit, NotebookEdit]` so they still **inherit** the `mcp__*` tools — a bare `tools:` allowlist would exclude every MCP tool and break them.
+- **Notion local-cache reader.** `sources/notion/extract_local.py` → `~/bin/notion-extract`. Reads the desktop app's `notion.db` SQLite cache (read-only, via a `.backup` snapshot) — **no API, no page-sharing** needed. This is the primary Notion path on this machine; the Notion API only sees pages explicitly shared with the integration. (Lark's desktop cache is encrypted — Lark is API/MCP only.)
+
+| Read path | Tool | When |
+|---|---|---|
+| Notion / Lark MCP | `mcp__notion__*` / `mcp__lark__*` | Default — global, always-on |
+| Notion local cache | `notion-extract "<needles>" <out-dir>` | Pages not shared with the integration |
+| Direct REST | `eval "$(api_keys export)"` + curl | Ad-hoc probes (`api_keys test`) |
+
+**Credentials:** `api_keys set` stores `NOTION_API_KEY` / `LARK_APP_ID` / `LARK_APP_SECRET` in the Keychain; `api_keys test` smoke-tests both against live endpoints. Emitted Markdown is **reference-only** (provenance-stamped) — never treated as ground truth.
 
 ---
