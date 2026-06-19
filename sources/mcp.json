@@ -1,0 +1,21 @@
+{
+  "_comment": "Canonical Notion + Lark MCP server definitions. SECRET-FREE: each server self-runs `api_keys export` to pull credentials from the macOS Keychain at launch, then execs the real MCP server. install.sh registers these at USER scope (claude mcp add-json -s user) so they load in every Claude Code session. This file is ALSO a valid drop-in project `.mcp.json` (copy it into a repo and approve via enabledMcpjsonServers).",
+  "mcpServers": {
+    "notion": {
+      "type": "stdio",
+      "command": "bash",
+      "args": [
+        "-c",
+        "eval \"$(\"$HOME/bin/api_keys\" export)\" && export NOTION_TOKEN=\"$NOTION_API_KEY\" && exec npx -y @notionhq/notion-mcp-server"
+      ]
+    },
+    "lark": {
+      "type": "stdio",
+      "command": "bash",
+      "args": [
+        "-c",
+        "eval \"$(\"$HOME/bin/api_keys\" export)\" && exec npx -y @larksuiteoapi/lark-mcp mcp -a \"$LARK_APP_ID\" -s \"$LARK_APP_SECRET\" -d https://open.larksuite.com"
+      ]
+    }
+  }
+}

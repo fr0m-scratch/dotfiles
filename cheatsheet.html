@@ -527,6 +527,10 @@
         <span class="act">Keychain-backed API key manager</span>
       </div>
       <div class="row">
+        <span class="keys"><kbd>notion-extract</kbd></span>
+        <span class="act">Notion local-cache → Markdown (no API)</span>
+      </div>
+      <div class="row">
         <span class="keys"><kbd>wave_focus</kbd></span>
         <span class="act">Focus the Wave window</span>
       </div>
@@ -548,6 +552,47 @@
         <span class="chip">--dry-run</span>
         <span class="chip">--yes</span>
       </div>
+    </section>
+
+    <!-- 7 · SOURCES & INTAKE -->
+    <section class="card">
+      <div class="card-head">
+        <h2 class="card-title">Sources · Intake</h2>
+        <span class="num"><em>07</em> / Lark · Notion</span>
+      </div>
+
+      <div class="sub" style="border-top:0;padding-top:0;margin-top:0">Credentials (Keychain)</div>
+      <div class="row focus">
+        <span class="keys"><kbd>api_keys</kbd><span class="plus"> </span><kbd>set</kbd></span>
+        <span class="act"><b>set</b> · <b>test</b> · <b>export</b> — NOTION_API_KEY / LARK_APP_ID / LARK_APP_SECRET</span>
+      </div>
+
+      <div class="sub">Read paths</div>
+      <div class="row">
+        <span class="keys"><kbd>mcp__notion__*</kbd></span>
+        <span class="act">Notion MCP — global, always-on</span>
+      </div>
+      <div class="row">
+        <span class="keys"><kbd>mcp__lark__*</kbd></span>
+        <span class="act">Lark MCP — global, always-on</span>
+      </div>
+      <div class="row">
+        <span class="keys"><kbd>notion-extract</kbd></span>
+        <span class="act"><b>Notion local cache</b> → Markdown (no API/sharing)</span>
+      </div>
+      <div class="row">
+        <span class="keys"><kbd>claude mcp list</kbd></span>
+        <span class="act">verify both report ✔ Connected</span>
+      </div>
+
+      <div class="sub">Agents</div>
+      <div class="chips">
+        <span class="chip">@notion-agent</span>
+        <span class="chip">@lark-agent</span>
+      </div>
+      <p class="note" style="font-style:normal;color:var(--ink-soft);font-size:12px">
+        Defs in <b style="color:var(--ink)">sources/mcp.json</b> self-fetch creds from the Keychain at launch — no secret on disk. Output is <b style="color:var(--ink)">reference-only</b>. See docs/sources.md.
+      </p>
     </section>
 
   </main>

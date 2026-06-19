@@ -161,6 +161,27 @@ link_bin(){
   step "Linking ~/bin scripts"
   for f in "$DOTFILES"/bin/*; do link "bin/$(basename "$f")" "$HOME/bin/$(basename "$f")"; done
 }
+link_sources(){ # information-intake: Lark/飞书 + Notion read agents + the Notion local-cache extractor
+  step "Linking source agents + Notion extractor"
+  link sources/notion/agent.md       "$HOME/.claude/agents/notion-agent.md"
+  link sources/lark/agent.md         "$HOME/.claude/agents/lark-agent.md"
+  link sources/notion/extract_local.py "$HOME/bin/notion-extract"   # → notion-extract on PATH
+}
+register_sources_mcp(){ # global, always-on Notion + Lark MCP — defs in sources/mcp.json, creds from Keychain
+  step "Registering Notion + Lark MCP (user scope · always-on)"
+  have claude || { warn "claude CLI missing — skipping MCP registration (run later: claude mcp add-json …)"; return; }
+  have jq     || { warn "jq missing — skipping MCP registration"; return; }
+  local spec
+  for name in notion lark; do
+    spec="$(jq -c --arg n "$name" '.mcpServers[$n]' "$DOTFILES/sources/mcp.json")"
+    [[ -z "$spec" || "$spec" == "null" ]] && { warn "no '$name' server in sources/mcp.json"; continue; }
+    if (( DRY )); then info "[dry] claude mcp add-json $name -s user '<from sources/mcp.json>'"; continue; fi
+    claude mcp remove "$name" -s user >/dev/null 2>&1 || true   # idempotent: the repo definition wins
+    if claude mcp add-json "$name" "$spec" -s user >/dev/null 2>&1; then ok "registered $name (user scope)"
+    else warn "failed to register $name — retry: claude mcp add-json $name '<spec>' -s user"; fi
+  done
+  info "Creds self-fetch from the Keychain at launch (api_keys) — set them with: api_keys set"
+}
 link_shell(){
   step "Linking shell config"
   link shell/zshrc    "$HOME/.zshrc"
@@ -267,6 +288,8 @@ main(){
 
   link_claude
   link_bin               # api_keys + wave_focus + wm_* are useful in both profiles
+  link_sources           # notion/lark read agents + notion-extract — useful in both profiles
+  register_sources_mcp   # global Notion + Lark MCP (Keychain-backed) — available in every session
 
   if [[ "$PROFILE" == "full" ]]; then
     ensure_p10k
@@ -283,6 +306,10 @@ main(){
   Next:
     • Open a new terminal (or: ${ACC}exec zsh${R}) to load the shell config.
     • Manage API keys:  ${ACC}api_keys help${R}   (stored in macOS Keychain).
+    • Read Lark + Notion: set creds with ${ACC}api_keys set${R} (NOTION_API_KEY / LARK_APP_ID /
+      LARK_APP_SECRET), then ${ACC}api_keys test${R}. Notion + Lark MCP are now global (every
+      session); verify with ${ACC}claude mcp list${R}. Notion local cache: ${ACC}notion-extract${R}.
+      See ${ACC}docs/sources.md${R}.
     • IP geofence is OFF by default. To enable, copy
       claude/scripts/blocked-countries.example.sh →
       ~/.config/claude-ip-guard/blocked-countries.sh

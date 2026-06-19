@@ -1,18 +1,24 @@
 # Plan
 
 _Source of truth. Keep this the most up-to-date document at all times._
-_Last updated: 2026-06-09_
+_Last updated: 2026-06-19_
 
 ## Current Objective
-Ship the reusable dotfiles repo (public, name `dotfiles`) and push to the user's GitHub.
+Maintain the reusable dotfiles repo (public, `dotfiles`). Latest: consolidated the
+Lark/飞书 + Notion read setup from `plantcore/sources` into `sources/`.
 
 ## TODO
-- (none — shipped)
+- (none)
 
 ## In Progress
 - (none)
 
 ## Done
+- [x] **Information intake (`sources/`)** — captured how this machine reads Lark + Notion:
+      canonical `sources/mcp.json` (Keychain self-fetch, secret-free), `@notion-agent` +
+      `@lark-agent` subagents, the Notion local-cache extractor (`notion-extract`), plus
+      `docs/sources.md`. `install.sh` links the agents/extractor and registers Notion + Lark
+      MCP at **user scope** (global, always-on); verified ✔ Connected via `claude mcp list`.
 - [x] Pushed to GitHub: https://github.com/fr0m-scratch/dotfiles (public, main, 46 files). Switched origin SSH→HTTPS after an SSH key was missing.
 - [x] Added README "How I actually work (the philosophy)" section (later moved out — see below).
 
@@ -49,3 +55,9 @@ Ship the reusable dotfiles repo (public, name `dotfiles`) and push to the user's
   self-installing public dotfiles repo with a TUI installer, detailed docs, and an
   HTML cheatsheet; build via multiple workflows; push to GitHub.
 - 2026-06-09: Correction — the cheatsheet must be HLF **Print** style (not Bold); keep only Print.
+- 2026-06-19: New requirement — read how Lark/飞书 + Notion are accessed in `plantcore/sources`
+  and consolidate it ALL into dotfiles; then update every relevant doc, commit, and push.
+  User chose **global, always-on** MCP scope (vs per-repo template). — DONE: added `sources/`
+  (mcp.json + agents + extractor), wired `install.sh` (link_sources + register_sources_mcp via
+  `claude mcp add-json -s user`), registered + health-checked both servers live (✔ Connected),
+  and updated README + `docs/sources.md` + cheatsheet (new card 07) + Plan. No secrets committed.

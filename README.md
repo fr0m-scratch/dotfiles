@@ -72,11 +72,12 @@ it re-uses existing symlinks and skips packages that are already present.
 | Area | What it is | Docs |
 |------|-----------|------|
 | **Claude Code** | `claude/settings.json`, bundled skills (`apple-frontend`, `apple-sales-doc`, `fr0m`, `new-skill`), hooks (`fr0m-guard.py`, `fr0m-rules.py`, `aol-append.sh`), slash commands (`/check`, `/fr0m`), the `blocks` output-style + theme, an IP-geofence guard, plus auto-install of the Claude Code CLI and `bun` (runs the statusline). | [`docs/claude-code.md`](docs/claude-code.md) |
+| **Information intake — Lark + Notion** | `sources/` — how this machine reads Lark/飞书 + Notion. Two Claude subagents (`@notion-agent`, `@lark-agent`), the canonical Keychain-backed MCP defs (`sources/mcp.json`, registered globally so `mcp__notion__*` / `mcp__lark__*` load in every session), and a Notion **local-cache extractor** (`notion-extract`) that reads the desktop app's SQLite cache with no API or page-sharing. Creds stay in the Keychain via `api_keys` — nothing here holds a secret. | [`docs/sources.md`](docs/sources.md) |
 | **Window management** | yabai tiling WM (`wm/yabairc`) + skhd hotkey daemon (`wm/skhdrc`) + Karabiner-Elements key remaps (`wm/karabiner.json`, e.g. Caps Lock → Wave, Option-based workspace switching). | [`docs/window-management.md`](docs/window-management.md) |
 | **Terminals** | WaveTerm settings + term themes (`terminal/waveterm/`) and an iTerm2 Tokyo Night dynamic profile (`terminal/iterm2/DynamicProfiles/`). | [`docs/shell-and-terminal.md`](docs/shell-and-terminal.md) |
 | **Shell** | zsh config (`shell/zshrc`), Powerlevel10k prompt (`shell/p10k.zsh`, cloned to `~/powerlevel10k`), and a templatized `~/.gitconfig`. | [`docs/shell-and-terminal.md`](docs/shell-and-terminal.md) |
 | **Keybindings** | The full hotkey map across skhd, Karabiner, and the terminals. | [`docs/keybindings.md`](docs/keybindings.md) |
-| **`~/bin` tools** | `api_keys` (Keychain key manager), `wave_focus`, and the `wm_*` window helpers (`wm_chat`, `wm_firefox`, `wm_lark`, `wm_notion`, `wm_arrange_chat`, `wm_space_minimize`, `wm_space_restore`). Linked in **both** profiles. | [`docs/window-management.md`](docs/window-management.md) |
+| **`~/bin` tools** | `api_keys` (Keychain key manager), `notion-extract` (Notion local-cache reader → [`docs/sources.md`](docs/sources.md)), `wave_focus`, and the `wm_*` window helpers (`wm_chat`, `wm_firefox`, `wm_lark`, `wm_notion`, `wm_arrange_chat`, `wm_space_minimize`, `wm_space_restore`). Linked in **both** profiles. | [`docs/window-management.md`](docs/window-management.md) |
 
 A printable, browser-openable shortcut & command reference lives at
 [`cheatsheet.html`](cheatsheet.html).
@@ -193,6 +194,11 @@ dotfiles/
 │   ├── commands/               # /check, /fr0m
 │   ├── output-styles/blocks.md
 │   └── themes/blocks.json
+├── sources/                    # read Lark/飞书 + Notion (secret-free; creds via api_keys)
+│   ├── mcp.json                # notion + lark MCP defs → registered globally (user scope)
+│   ├── notion/agent.md         # @notion-agent → ~/.claude/agents/
+│   ├── notion/extract_local.py # local-cache extractor → ~/bin/notion-extract
+│   └── lark/agent.md           # @lark-agent → ~/.claude/agents/
 ├── shell/                      # zshrc, p10k.zsh, gitconfig.template
 ├── terminal/
 │   ├── waveterm/               # settings.json, termthemes.json
@@ -200,6 +206,7 @@ dotfiles/
 ├── wm/                         # yabairc, skhdrc, karabiner.json
 └── docs/
     ├── claude-code.md
+    ├── sources.md              # read Lark + Notion (intake)
     ├── window-management.md
     ├── keybindings.md
     └── shell-and-terminal.md
