@@ -10,6 +10,8 @@ brew "bun"          # runs the claude-hud statusline (settings.json)
 brew "node"         # general JS tooling
 brew "jq"           # used by the `wave` shell function & scripts
 brew "git"
+brew "pandoc"       # /latex skill: Markdown → formal PDF (needs TinyTeX/xelatex)
+brew "poppler"      # /latex verify step (pdftoppm) + PDF page rendering
 
 # ── window management (full profile) ─────────────────────────────
 brew "koekeishiya/formulae/yabai"   # tiling WM  (needs SIP partial-disable for scripting addition)

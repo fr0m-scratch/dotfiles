@@ -71,7 +71,7 @@ it re-uses existing symlinks and skips packages that are already present.
 
 | Area | What it is | Docs |
 |------|-----------|------|
-| **Claude Code** | `claude/settings.json`, bundled skills (`apple-frontend`, `apple-sales-doc`, `fr0m`, `new-skill`), hooks (`fr0m-guard.py`, `fr0m-rules.py`, `aol-append.sh`), slash commands (`/check`, `/fr0m`), the `blocks` output-style + theme, an IP-geofence guard, plus auto-install of the Claude Code CLI and `bun` (runs the statusline). | [`docs/claude-code.md`](docs/claude-code.md) |
+| **Claude Code** | `claude/settings.json`, bundled skills (`apple-frontend`, `apple-sales-doc`, `fr0m`, `new-skill`, `latex`), hooks (`fr0m-guard.py`, `fr0m-rules.py`, `aol-append.sh`), slash commands (`/check`, `/fr0m`, `/latex`), the `blocks` output-style + theme, an IP-geofence guard, plus auto-install of the Claude Code CLI and `bun` (runs the statusline). | [`docs/claude-code.md`](docs/claude-code.md) |
 | **Information intake — Lark + Notion** | `sources/` — how this machine reads Lark/飞书 + Notion. Two Claude subagents (`@notion-agent`, `@lark-agent`), the canonical Keychain-backed MCP defs (`sources/mcp.json`, registered globally so `mcp__notion__*` / `mcp__lark__*` load in every session), and a Notion **local-cache extractor** (`notion-extract`) that reads the desktop app's SQLite cache with no API or page-sharing. Creds stay in the Keychain via `api_keys` — nothing here holds a secret. | [`docs/sources.md`](docs/sources.md) |
 | **Window management** | yabai tiling WM (`wm/yabairc`) + skhd hotkey daemon (`wm/skhdrc`) + Karabiner-Elements key remaps (`wm/karabiner.json`, e.g. Caps Lock → Wave, Option-based workspace switching). | [`docs/window-management.md`](docs/window-management.md) |
 | **Terminals** | WaveTerm settings + term themes (`terminal/waveterm/`) and an iTerm2 Tokyo Night dynamic profile (`terminal/iterm2/DynamicProfiles/`). | [`docs/shell-and-terminal.md`](docs/shell-and-terminal.md) |
@@ -82,7 +82,7 @@ it re-uses existing symlinks and skips packages that are already present.
 A printable, browser-openable shortcut & command reference lives at
 [`cheatsheet.html`](cheatsheet.html).
 
-> **Skills vs plugins.** The four skills above are *bundled* (symlinked from this repo into
+> **Skills vs plugins.** The five skills above are *bundled* (symlinked from this repo into
 > `~/.claude/skills/`). `claude-hud` and `frontend-design` are *plugins* declared in
 > `settings.json`; they fetch from their marketplaces on first `claude` launch (or via
 > `/plugin`) and are not stored in this repo.

@@ -1,6 +1,6 @@
 # Claude Code Personalization
 
-这份文档讲清楚本仓库对 **Claude Code** 做的所有个性化：界面/行为设置、四个自定义 skill、`fr0m` 项目治理系统、IP 地理围栏，以及两个自定义命令。每一项都说明 **它是什么 / 怎么配置的 / 怎么用**。
+这份文档讲清楚本仓库对 **Claude Code** 做的所有个性化：界面/行为设置、五个自定义 skill、`fr0m` 项目治理系统、IP 地理围栏，以及三个自定义命令。每一项都说明 **它是什么 / 怎么配置的 / 怎么用**。
 
 All the Claude Code customization in this repo lives under `claude/` and is symlinked into `~/.claude/` by `./install.sh`. Nothing here requires editing Claude Code's own source — everything is driven by `settings.json`, skill folders, hooks, and slash commands.
 
@@ -103,7 +103,7 @@ So the statusline is a TypeScript program shipped by the claude-hud plugin, run 
 
 ## 2. Skills
 
-四个自定义 skill 放在 `claude/skills/<name>/SKILL.md`，安装后是全局的（每个项目都能用）。一个 skill = 一个带 `SKILL.md` 的文件夹；frontmatter 的 `description` 是触发器，正文是给模型的指令。用 `/<name>` 显式调用，或在描述匹配时由模型自动加载（除非禁用了自动调用）。
+五个自定义 skill 放在 `claude/skills/<name>/SKILL.md`，安装后是全局的（每个项目都能用）。一个 skill = 一个带 `SKILL.md` 的文件夹；frontmatter 的 `description` 是触发器，正文是给模型的指令。用 `/<name>` 显式调用，或在描述匹配时由模型自动加载（除非禁用了自动调用）。
 
 | Skill | What it does | How to invoke |
 |---|---|---|
@@ -111,6 +111,7 @@ So the statusline is a TypeScript program shipped by the claude-hud plugin, run 
 | **apple-sales-doc** | Generates a polished, Apple-clean **one-page sales/pitch document** as a single self-contained HTML file with real product screenshots embedded as base64 (print-to-PDF friendly). Pairs with apple-frontend (screenshot that UI into this doc). | `/apple-sales-doc`, or auto-loads on "sales doc / pitch / one-pager / 销售文档". |
 | **fr0m** | Initializes/refreshes a project's **governance docs** (Principal/Plan/AOL/Errors.md), ensures git, runs a clarifying Q&A, and produces an agreed Plan.md. See §3. | `/fr0m <goal + restrictions>` — **user-only** (`disable-model-invocation: true`; never auto-fires). |
 | **new-skill** | Scaffolds a new reusable skill from a description — picks a kebab name, writes a strong trigger `description` + imperative body, creates `~/.claude/skills/<name>/SKILL.md`, and confirms registration. | `/new-skill <description>`, or auto-loads on "make this a skill / write a new skill". |
+| **latex** | Compiles a **very formal / official technical document** (ICD, specification, RFC, 技术规范) to a **print-grade PDF via LaTeX** (pandoc → xelatex/xeCJK, full 中文) — numbered sections + TOC + RFC-2119, Songti 宋体 serif + Menlo mono, **zero decoration**. Bundles `build_pdf.sh`; self-verifies the render (PDF → PNG → Read). Pairs with `/check` — use `/latex` when the deliverable must be a formal **PDF**. | `/latex <topic / source>`, or auto-loads on "formal PDF / spec / ICD / 正式文档". |
 
 > The two `apple-*` skills share the same anti-AI-slop design tokens and the same "screenshot the real UI with headless Chrome, then Read the PNG to self-verify" workflow — apple-frontend builds the UI, apple-sales-doc embeds screenshots of it into a pitch.
 
@@ -225,6 +226,14 @@ It writes `./.check/<slug>.html` (inline `<style>`, UTF-8, no network/CDN deps, 
 
 ```text
 /fr0m <project goal and key restrictions>
+```
+
+### `/latex` — compile a formal document to a print-grade PDF
+
+`claude/commands/latex.md`. A thin entry point that tells Claude to read `~/.claude/skills/latex/SKILL.md` and follow it: write/refine the content as Markdown, compile it to a **formal PDF** with the bundled `build_pdf.sh` (pandoc → xelatex + xeCJK — numbered sections, TOC, RFC-2119 where normative, Songti 宋体 + Menlo, A4, header/footer, **no emoji / no flourish**, full 中文), then **verify the render** (PDF → PNG → Read) before delivering. For ICDs / specifications / 技术规范 / 正式文档. Pairs with `/check`: `/latex` when the deliverable must be a formal **PDF**, `/check` when it's a viewable **HTML** artifact. Needs `pandoc` + TinyTeX (`xelatex`) + `poppler` (the skill prints the install commands if a tool is missing).
+
+```text
+/latex the daemon ingestion ICD from above
 ```
 
 ---
