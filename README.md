@@ -71,10 +71,10 @@ it re-uses existing symlinks and skips packages that are already present.
 
 | Area | What it is | Docs |
 |------|-----------|------|
-| **Claude Code** | `claude/settings.json`, bundled skills (`apple-frontend`, `apple-sales-doc`, `fr0m`, `new-skill`, `latex`), hooks (`fr0m-guard.py`, `fr0m-rules.py`, `aol-append.sh`), slash commands (`/check`, `/fr0m`, `/latex`), the `blocks` output-style + theme, an IP-geofence guard, plus auto-install of the Claude Code CLI and `bun` (runs the statusline). | [`docs/claude-code.md`](docs/claude-code.md) |
+| **Claude Code** | `claude/settings.json`, bundled skills (`apple-frontend`, `apple-sales-doc`, `fr0m`, `new-skill`, `latex`), hooks (`fr0m-guard.py`, `fr0m-rules.py`, `aol-append.sh`), slash commands (`/open`, `/check`, `/fr0m`, `/latex` — `/open`+`/check` render md/html/pdf into the current terminal via the portable `claude/commands/lib/open-render.sh` dispatcher: Wave `wsh`, otty `otty view`, or a plain-terminal `open`/`glow` fallback), the `blocks` output-style + theme, an IP-geofence guard, plus auto-install of the Claude Code CLI and `bun` (runs the statusline). | [`docs/claude-code.md`](docs/claude-code.md) |
 | **Information intake — Lark + Notion** | `sources/` — how this machine reads Lark/飞书 + Notion. Two Claude subagents (`@notion-agent`, `@lark-agent`), the canonical Keychain-backed MCP defs (`sources/mcp.json`, registered globally so `mcp__notion__*` / `mcp__lark__*` load in every session), and a Notion **local-cache extractor** (`notion-extract`) that reads the desktop app's SQLite cache with no API or page-sharing. Creds stay in the Keychain via `api_keys` — nothing here holds a secret. | [`docs/sources.md`](docs/sources.md) |
 | **Window management** | yabai tiling WM (`wm/yabairc`) + skhd hotkey daemon (`wm/skhdrc`) + Karabiner-Elements key remaps (`wm/karabiner.json`, e.g. Caps Lock → Wave, Option-based workspace switching). | [`docs/window-management.md`](docs/window-management.md) |
-| **Terminals** | WaveTerm settings + term themes (`terminal/waveterm/`) and an iTerm2 Tokyo Night dynamic profile (`terminal/iterm2/DynamicProfiles/`). | [`docs/shell-and-terminal.md`](docs/shell-and-terminal.md) |
+| **Terminals** | WaveTerm settings + term themes (`terminal/waveterm/`), the same visual layer ported 1:1 to **otty** (`terminal/otty/` — `config.toml` + a custom Tokyo Night theme), and an iTerm2 Tokyo Night dynamic profile (`terminal/iterm2/DynamicProfiles/`). | [`docs/shell-and-terminal.md`](docs/shell-and-terminal.md) |
 | **Shell** | zsh config (`shell/zshrc`), Powerlevel10k prompt (`shell/p10k.zsh`, cloned to `~/powerlevel10k`), and a templatized `~/.gitconfig`. | [`docs/shell-and-terminal.md`](docs/shell-and-terminal.md) |
 | **Keybindings** | The full hotkey map across skhd, Karabiner, and the terminals. | [`docs/keybindings.md`](docs/keybindings.md) |
 | **`~/bin` tools** | `api_keys` (Keychain key manager), `notion-extract` (Notion local-cache reader → [`docs/sources.md`](docs/sources.md)), `wave_focus`, and the `wm_*` window helpers (`wm_chat`, `wm_firefox`, `wm_lark`, `wm_notion`, `wm_arrange_chat`, `wm_space_minimize`, `wm_space_restore`). Linked in **both** profiles. | [`docs/window-management.md`](docs/window-management.md) |
@@ -191,7 +191,7 @@ dotfiles/
 │   ├── skills/                 # apple-frontend, apple-sales-doc, fr0m, new-skill
 │   ├── hooks/                  # fr0m-guard.py, fr0m-rules.py, aol-append.sh
 │   ├── scripts/                # IP-guard lib + blocked-countries.example.sh
-│   ├── commands/               # /check, /fr0m
+│   ├── commands/               # /open, /check, /fr0m, /latex (+ lib/open-render.sh dispatcher)
 │   ├── output-styles/blocks.md
 │   └── themes/blocks.json
 ├── sources/                    # read Lark/飞书 + Notion (secret-free; creds via api_keys)
@@ -202,6 +202,7 @@ dotfiles/
 ├── shell/                      # zshrc, p10k.zsh, gitconfig.template
 ├── terminal/
 │   ├── waveterm/               # settings.json, termthemes.json
+│   ├── otty/                   # config.toml + themes/tokyonight.ottytheme (otty.sh)
 │   └── iterm2/DynamicProfiles/ # tokyo-night.json
 ├── wm/                         # yabairc, skhdrc, karabiner.json
 └── docs/

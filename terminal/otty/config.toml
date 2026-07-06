@@ -1,0 +1,22 @@
+# otty config — visual layer ported 1:1 from Wave Terminal
+# Source: ~/.config/waveterm/settings.json  (+ termthemes.json for the theme)
+#
+#   Wave key                              -> otty key
+#   term:fontfamily "Maple Mono NF CN"    -> font-family
+#   term:fontsize   16                    -> font-size
+#   term:theme      "tokyonight"          -> theme  (custom, themes/tokyonight.ottytheme)
+#   window:opacity  0.9                   -> background-opacity   (0.9 < 1.0 *is* the transparency;
+#   window:transparent true                  otty has no separate transparent flag)
+#   app:tabbar      "top"                 -> window-layout = tabs-top
+#
+# Wave-only pieces NOT ported (no otty equivalent): blocks / AI panel / file-tree /
+# quota status bar / the `wave` VS Code-style layout function.
+
+font-family        = "Maple Mono NF CN"
+font-size          = 16
+theme              = "tokyonight"
+# otty can auto-switch themes by macOS appearance (auto-theme-dark-mode, off by default).
+# Wave has ONE theme regardless of appearance — pin the dark slot too so it's always Tokyo Night.
+theme-dark         = "tokyonight"
+background-opacity = 0.9
+window-layout      = "tabs-top"

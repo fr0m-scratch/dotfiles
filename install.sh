@@ -206,6 +206,10 @@ link_terminals(){
   step "Linking terminal config"
   link terminal/waveterm/settings.json   "$HOME/.config/waveterm/settings.json"
   link terminal/waveterm/termthemes.json "$HOME/.config/waveterm/termthemes.json"
+  # otty (otty.sh) — Wave's visual layer ported 1:1 (config + custom Tokyo Night theme).
+  # Link only our two files INTO otty's config dir; otty owns/populates its bundled themes there.
+  link terminal/otty/config.toml                 "$HOME/.config/otty/config.toml"
+  link terminal/otty/themes/tokyonight.ottytheme "$HOME/.config/otty/themes/tokyonight.ottytheme"
   link terminal/iterm2/DynamicProfiles/tokyo-night.json \
        "$HOME/Library/Application Support/iTerm2/DynamicProfiles/tokyo-night.json"
   info "In iTerm2: Settings → Profiles → select 'Tokyo Night (dotfiles)' → Other Actions → Set as Default."

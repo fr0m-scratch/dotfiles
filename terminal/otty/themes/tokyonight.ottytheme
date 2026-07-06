@@ -1,0 +1,19 @@
+# Tokyo Night (from iTerm2) — ported 1:1 from Wave ~/.config/waveterm/termthemes.json
+# palette order: 0-7 = black red green yellow blue magenta cyan white
+#                8-15 = bright variants of the same
+
+[terminal]
+foreground = "#bbc6f6"
+background = "#1a1b27"
+palette = [
+  "#2a2734", "#e2514e", "#00bcdb", "#e1c381",
+  "#5334b2", "#e69f51", "#2ab7e7", "#9b84ee",
+  "#454159", "#e2514e", "#4ef4df", "#e1c381",
+  "#7b64c3", "#e69f51", "#24d5f8", "#eeebff",
+]
+
+[selection]
+background = "#454159"
+
+[cursor]
+color = "#b2b2b2"
