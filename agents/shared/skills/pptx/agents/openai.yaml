@@ -1,0 +1,4 @@
+interface:
+  display_name: "PowerPoint"
+  short_description: "Create, edit, inspect, and validate PowerPoint decks"
+  default_prompt: "Use $pptx to work on this presentation and verify every slide visually."

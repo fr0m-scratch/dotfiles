@@ -1,0 +1,4 @@
+interface:
+  display_name: "Share on LAN"
+  short_description: "Expose a frontend and backend safely on the local network"
+  default_prompt: "Use $share-lan to expose this app to devices on the same Wi-Fi."

@@ -1,0 +1,7 @@
+# Portable baseline: potentially broad machine or network mutations always ask.
+# Do not add blanket allow rules such as pattern=["scp"].
+prefix_rule(pattern=["scp"], decision="prompt")
+prefix_rule(pattern=["sudo"], decision="prompt")
+prefix_rule(pattern=["git", "push"], decision="prompt")
+prefix_rule(pattern=["launchctl"], decision="prompt")
+prefix_rule(pattern=["osascript"], decision="prompt")

@@ -1,0 +1,4 @@
+interface:
+  display_name: "fr0m Governance"
+  short_description: "Initialize or reconcile lightweight project governance"
+  default_prompt: "Use $fr0m to initialize governance and agree on a plan for this project."

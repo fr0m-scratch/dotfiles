@@ -1,0 +1,4 @@
+interface:
+  display_name: "Apple Frontend"
+  short_description: "Build restrained Apple-style product interfaces"
+  default_prompt: "Use $apple-frontend to build a quiet, product-grade interface for this app."

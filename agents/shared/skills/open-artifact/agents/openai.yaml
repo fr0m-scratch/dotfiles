@@ -1,0 +1,4 @@
+interface:
+  display_name: "Open Artifact"
+  short_description: "Open Markdown or HTML in the current terminal surface"
+  default_prompt: "Use $open-artifact to preview the latest Markdown or HTML artifact."

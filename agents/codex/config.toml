@@ -1,0 +1,42 @@
+# Safe, portable Codex base. This is authored source; deployment must merge it
+# with the live config instead of overwriting auth, trust, hook hashes, or state.
+default_permissions = ":workspace"
+approval_policy = "on-request"
+approvals_reviewer = "user"
+personality = "pragmatic"
+model_reasoning_effort = "high"
+
+[analytics]
+enabled = true
+
+[features]
+hooks = true
+prevent_idle_sleep = true
+
+[tui]
+status_line = ["model-with-reasoning", "approval-mode", "context-used", "five-hour-limit", "weekly-limit", "task-progress"]
+status_line_use_colors = true
+
+[agents]
+max_threads = 4
+max_depth = 1
+
+[notice]
+hide_full_access_warning = false
+hide_rate_limit_model_nudge = true
+
+[otel]
+environment = "local-monitor"
+log_user_prompt = false
+
+[otel.exporter.otlp-http]
+endpoint = "http://localhost:4318/v1/logs"
+protocol = "binary"
+
+[otel.trace_exporter.otlp-http]
+endpoint = "http://localhost:4318/v1/traces"
+protocol = "binary"
+
+[otel.metrics_exporter.otlp-http]
+endpoint = "http://localhost:4318/v1/metrics"
+protocol = "binary"

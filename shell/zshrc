@@ -20,11 +20,16 @@ export PATH="$HOME/bin:$PATH"
 export BUN_INSTALL="$HOME/.bun"
 export PATH="$BUN_INSTALL/bin:$PATH"
 
-# NOTE: the source machine aliased `claude` to always pass
-# --dangerously-skip-permissions. That is intentionally NOT shipped here —
-# auto-skipping permission prompts is a footgun on a fresh machine. If you
-# truly want it, add it yourself in ~/.zshrc.local:
-#   alias claude='claude --dangerously-skip-permissions'
+# Permission-bypass aliases are deliberately unsupported. Use explicit,
+# narrowly scoped approvals when a task really needs elevated access.
+
+# Explicit project roots keep a HOME-level agent from treating the entire
+# machine as one writable repository. `machine-admin` is an opt-in Codex
+# profile and is never the default.
+codex-one() { command codex -C "$HOME/theOne" "$@"; }
+codex-plant() { command codex -C "$HOME/plantcore" "$@"; }
+codex-home() { command codex -C "$HOME" --sandbox read-only "$@"; }
+codex-admin() { command codex --profile machine-admin -C "$HOME" "$@"; }
 
 # ── Wave Terminal: open a project in a VS Code-like coding-agent layout ───────
 # `wsh` is usually injected into Wave panes, but make sure for plain logins too.

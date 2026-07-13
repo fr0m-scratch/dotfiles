@@ -1,0 +1,4 @@
+interface:
+  display_name: "HLF Modern"
+  short_description: "Create a current HLF landing page without AI-style excess"
+  default_prompt: "Use $hlf-modern to turn this product story into a restrained modern landing page."

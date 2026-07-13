@@ -7,6 +7,7 @@ NAMES=(
   "OpenAI:OPENAI_API_KEY"
   "Claude/Anthropic:ANTHROPIC_API_KEY"
   "DeepSeek:DEEPSEEK_API_KEY"
+  "GLM/Zhipu:GLM_API_KEY"
   "Notion:NOTION_API_KEY"
   "Lark App ID:LARK_APP_ID"
   "Lark App Secret:LARK_APP_SECRET"
@@ -260,6 +261,9 @@ cmd_test() {
   http_get_bearer "OpenAI" "OPENAI_API_KEY" "https://api.openai.com/v1/models"
   http_get_anthropic
   http_get_bearer "DeepSeek" "DEEPSEEK_API_KEY" "https://api.deepseek.com/models"
+  http_post_json_bearer "GLM/Zhipu" "GLM_API_KEY" \
+    "https://open.bigmodel.cn/api/paas/v4/chat/completions" \
+    '{"model":"glm-4-flash","messages":[{"role":"user","content":"hi"}],"max_tokens":1}'
   http_get_bearer "Notion" "NOTION_API_KEY" "https://api.notion.com/v1/users/me" \
     -H "Notion-Version: 2026-03-11"
   http_test_lark

@@ -1,7 +1,7 @@
 {
   "app:tabbar": "top",
   "autoupdate:channel": "latest",
-  "term:fontfamily": "Menlo",
+  "term:fontfamily": "Maple Mono NF CN",
   "term:fontsize": 16,
   "term:theme": "tokyonight",
   "window:opacity": 0.9,

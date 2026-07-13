@@ -85,7 +85,7 @@
   "effortLevel": "high",
   "advisorModel": "opus",
   "tui": "fullscreen",
-  "skipDangerousModePermissionPrompt": true,
+  "skipDangerousModePermissionPrompt": false,
   "skipWorkflowUsageWarning": true,
   "theme": "custom:blocks"
 }

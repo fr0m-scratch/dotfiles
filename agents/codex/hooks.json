@@ -1,0 +1,28 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash|apply_patch|Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$HOME/.codex/hooks/fr0m_guard.py\"",
+            "timeout": 10,
+            "statusMessage": "Checking governance invariants"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$HOME/.codex/hooks/fr0m_rules.py\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Apple Sales Document"
+  short_description: "Create a self-contained Apple-clean product one-pager"
+  default_prompt: "Use $apple-sales-doc to create an honest product one-pager from real evidence."

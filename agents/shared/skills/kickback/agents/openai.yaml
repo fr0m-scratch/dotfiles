@@ -1,0 +1,6 @@
+interface:
+  display_name: "Kickback Doctor"
+  short_description: "Diagnose and restore the Claude Code Kickbacks sidecar"
+  default_prompt: "Use $kickback to check whether Kickbacks is healthy and restore legitimate serving if possible."
+policy:
+  allow_implicit_invocation: false

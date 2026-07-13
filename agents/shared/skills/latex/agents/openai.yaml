@@ -1,0 +1,4 @@
+interface:
+  display_name: "Formal LaTeX PDF"
+  short_description: "Compile formal CJK technical documents to verified PDF"
+  default_prompt: "Use $latex to compile this technical document into a verified formal PDF."

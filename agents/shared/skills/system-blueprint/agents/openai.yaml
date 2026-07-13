@@ -1,0 +1,4 @@
+interface:
+  display_name: "System Blueprint"
+  short_description: "Create evidence-led architecture documents with hand-laid SVG"
+  default_prompt: "Use $system-blueprint to turn this system description into a precise architecture blueprint."

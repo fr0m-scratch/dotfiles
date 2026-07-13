@@ -1,0 +1,4 @@
+interface:
+  display_name: "Check Artifact"
+  short_description: "Render a result as a self-contained local HTML preview"
+  default_prompt: "Use $check-artifact to render the current result as a local HTML preview."
