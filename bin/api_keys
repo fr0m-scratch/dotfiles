@@ -8,29 +8,123 @@ NAMES=(
   "Claude/Anthropic:ANTHROPIC_API_KEY"
   "DeepSeek:DEEPSEEK_API_KEY"
   "GLM/Zhipu:GLM_API_KEY"
+  "GLM Coding 1:GLM_CODING_API_KEY"
+  "GLM Coding 2:GLM_CODING_API_KEY_2"
+  "Kimi Code 1:KIMI_API_KEY"
+  "Kimi Code 2:KIMI_API_KEY_2"
+  "Kimi Code 3:KIMI_API_KEY_3"
+  "LiteLLM:LITELLM_API_KEY"
+  "LiteLLM Base URL:LITELLM_BASE_URL"
   "Notion:NOTION_API_KEY"
   "Lark App ID:LARK_APP_ID"
   "Lark App Secret:LARK_APP_SECRET"
   "Fireworks:FIREWORKS_API_KEY"
   "MiniMax:MINIMAX_API_KEY"
+  "Exa Search:EXA_API_KEY"
+  "Tavily Search:TAVILY_API_KEY"
   "Volcengine App ID:VOLC_APP_ID"
   "Volcengine Access Token:VOLC_ACCESS_KEY"
   "Volcengine Secret Key:VOLC_SECRET_KEY"
+  "Webull App Key:WEBULL_APP_KEY"
+  "Webull App Secret:WEBULL_APP_SECRET"
+  "Tailscale API:TAILSCALE_API_KEY"
+  "Tailscale Auth Key:TAILSCALE_AUTHKEY"
+)
+
+# Kimi and GLM each serve several live, auth-gated roots and a given key is
+# valid on exactly one family of them: a Kimi Code subscription answers on
+# api.kimi.com/coding/v1 while Moonshot platform keys answer on
+# api.moonshot.{cn,ai}/v1; a GLM Coding Plan key answers on the .../coding/paas/v4
+# roots while a Zhipu platform key answers on the plain .../paas/v4 roots.
+# `test` probes these in order and reports the root that accepted the key --
+# that root is the api_root to put in a provider config. The Anthropic-wire
+# equivalents (for ANTHROPIC_BASE_URL) are:
+#   Kimi Code   https://api.kimi.com/coding
+#   GLM         https://open.bigmodel.cn/api/anthropic  |  https://api.z.ai/api/anthropic
+KIMI_API_ROOTS=(
+  "https://api.kimi.com/coding/v1"
+  "https://api.moonshot.cn/v1"
+  "https://api.moonshot.ai/v1"
+)
+
+GLM_CODING_API_ROOTS=(
+  "https://open.bigmodel.cn/api/coding/paas/v4"
+  "https://api.z.ai/api/coding/paas/v4"
+  "https://open.bigmodel.cn/api/paas/v4"
+  "https://api.z.ai/api/paas/v4"
+)
+
+GLM_PLATFORM_API_ROOTS=(
+  "https://open.bigmodel.cn/api/paas/v4"
+  "https://api.z.ai/api/paas/v4"
+)
+
+MINIMAX_API_ROOTS=(
+  "https://api.minimaxi.com/v1"
+  "https://api.minimax.chat/v1"
+  "https://api.minimax.io/v1"
+)
+
+# Webull is one API behind a dozen regional hosts, and a key issued for one
+# region is rejected by the others, so `test` probes in order and reports the
+# host that answered -- that host is the endpoint to configure. The full table,
+# from the SDK's own webull/core/data/endpoints.json:
+#   us api.webull.com     hk api.webull.hk      jp api.webull.co.jp
+#   sg api.webull.com.sg  th api.webull.co.th   au api.webull.com.au
+#   my api.webull.com.my  uk api.webull-uk.com  eu api.webull.eu
+#   br, mx -> us hosts    za -> au hosts
+# Sandbox mirrors production under api.sandbox.webull.com. Set WEBULL_API_HOST
+# to probe one host instead of this list.
+WEBULL_API_HOSTS=(
+  "api.webull.com"
+  "api.sandbox.webull.com"
+  "api.webull.hk"
+  "api.webull.co.jp"
+)
+
+# The docs' signature page specifies HMAC-SHA1 while the current SDK (2.0.16)
+# overrides every request to HMAC-SHA256. Credentials that do not exist draw the
+# same 401 either way, so which one an account's host accepts cannot be settled
+# without a real key: send the SDK's first, fall back to the documented one, and
+# report which one answered.
+WEBULL_SIGN_ALGORITHMS=(
+  "HMAC-SHA256"
+  "HMAC-SHA1"
 )
 
 usage() {
   cat <<'EOF'
 Usage:
-  api_keys set       Prompt for keys and save them to macOS Keychain
-  api_keys export    Print shell exports for saved keys
-  api_keys test      Test saved keys against lightweight API endpoints
-  api_keys list      Show which keys are saved
-  api_keys delete    Delete saved keys from macOS Keychain
+  api_keys set      [KEY...]   Prompt for keys and save them to macOS Keychain
+  api_keys template [KEY...]   Print a blank NAME=value block to fill in
+  api_keys import   [FILE]     Save a pasted/piped NAME=value block (stdin default)
+  api_keys export   [KEY...]   Print shell exports for saved keys
+  api_keys test     [KEY...]   Test saved keys against lightweight API endpoints
+  api_keys list     [KEY...]   Show which keys are saved, with a safe fingerprint
+  api_keys delete   [KEY...]   Delete saved keys from macOS Keychain
+
+KEY selects one entry; with no KEY every entry is used. A selector matches the
+environment variable (KIMI_API_KEY), its provider prefix (kimi), or the display
+label ("Kimi Code 1"), case-insensitively. A prefix covering several variables
+selects all of them (kimi -> KIMI_API_KEY + KIMI_API_KEY_2 + KIMI_API_KEY_3).
 
 Recommended:
   api_keys set
   eval "$(api_keys export)"
   api_keys test
+
+Add or replace a single key without re-prompting the rest:
+  api_keys set kimi_api_key_2 && api_keys test kimi_api_key_2
+
+Paste several keys in one go (nothing is written until you close the input):
+  api_keys import
+  KIMI_API_KEY_2=sk-...
+  KIMI_API_KEY_3=sk-...
+  <Ctrl-D>
+
+Or fill in a template and pipe it back:
+  api_keys template kimi glm litellm > /tmp/keys.txt   # edit, then:
+  api_keys import /tmp/keys.txt && rm -P /tmp/keys.txt
 EOF
 }
 
@@ -61,13 +155,106 @@ shell_quote() {
   printf "'%s'" "${value//\'/\'\\\'\'}"
 }
 
+lower() {
+  printf '%s' "$1" | tr '[:upper:]' '[:lower:]'
+}
+
+upper() {
+  printf '%s' "$1" | tr '[:lower:]' '[:upper:]'
+}
+
+trim() {
+  local value="$1"
+  value="${value#"${value%%[![:space:]]*}"}"
+  value="${value%"${value##*[![:space:]]}"}"
+  printf '%s' "$value"
+}
+
+# A length plus a truncated digest: enough to confirm a paste landed and to spot
+# the same key pasted into two slots, without ever putting the secret on screen.
+fingerprint() {
+  local value="$1" digest
+  digest="$(printf '%s' "$value" | shasum -a 256 | cut -c1-8)"
+  printf '%d chars, sha256:%s' "${#value}" "$digest"
+}
+
+digest_of() {
+  printf '%s' "$1" | shasum -a 256 | cut -c1-8
+}
+
+# Print the NAMES entries matching each selector, one per line.
+resolve_selectors() {
+  local sel item label env_name norm_sel norm_env norm_label hit rc=0
+
+  for sel in "$@"; do
+    norm_sel="$(lower "$sel")"
+    hit=0
+    for item in "${NAMES[@]}"; do
+      label="${item%%:*}"
+      env_name="${item##*:}"
+      norm_env="$(lower "$env_name")"
+      norm_label="$(lower "$label")"
+
+      if [[ "$norm_sel" == "$norm_env" ]] \
+        || [[ "$norm_sel" == "${norm_env%_api_key}" ]] \
+        || [[ "$norm_sel" == "$norm_label" ]] \
+        || [[ "$norm_env" == "$norm_sel"_* ]]; then
+        printf '%s\n' "$item"
+        hit=1
+      fi
+    done
+
+    if [[ "$hit" -eq 0 ]]; then
+      printf 'Unknown key selector: %s\n' "$sel" >&2
+      rc=1
+    fi
+  done
+
+  return "$rc"
+}
+
+# Populate SELECTED with the entries a command should act on: everything when no
+# selector is given, otherwise just the resolved ones. Exits on a bad selector so
+# a typo never silently degrades into "operate on all keys".
+SELECTED=()
+select_items() {
+  local resolved item
+
+  SELECTED=()
+
+  if [[ "$#" -eq 0 ]]; then
+    for item in "${NAMES[@]}"; do
+      SELECTED+=("$item")
+    done
+    return 0
+  fi
+
+  resolved="$(resolve_selectors "$@")" || {
+    printf 'Run `api_keys list` to see the available names.\n' >&2
+    exit 2
+  }
+
+  while IFS= read -r item; do
+    [[ -n "$item" ]] && SELECTED+=("$item")
+  done <<EOF
+$resolved
+EOF
+
+  if [[ "${#SELECTED[@]}" -eq 0 ]]; then
+    printf 'No keys selected.\n' >&2
+    exit 2
+  fi
+}
+
 cmd_set() {
   local item label env_name secret existing
+
+  select_items "$@"
 
   echo "Paste each API key at the prompt. Input is hidden. Press Enter on an empty prompt to skip."
   echo
 
-  for item in "${NAMES[@]}"; do
+  for item in "${SELECTED[@]}"; do
     label="${item%%:*}"
     env_name="${item##*:}"
 
@@ -85,20 +272,170 @@ cmd_set() {
       continue
     fi
 
-    security add-generic-password \
-      -U \
-      -s "$KEYCHAIN_SERVICE" \
-      -a "$env_name" \
-      -w "$secret" >/dev/null
+    save_key "$env_name" "$secret"
+  done
+}
 
-    echo "Saved $env_name"
+save_key() {
+  local env_name="$1" secret="$2"
+
+  security add-generic-password \
+    -U \
+    -s "$KEYCHAIN_SERVICE" \
+    -a "$env_name" \
+    -w "$secret" >/dev/null
+
+  printf 'Saved %s (%s)\n' "$env_name" "$(fingerprint "$secret")"
+}
+
+cmd_template() {
+  local item label env_name
+
+  select_items "$@"
+
+  cat <<'EOF'
+# Fill in a value after each '='. Blank lines, '#' comments and empty values are
+# ignored, so leave any slot you are not setting alone. Then:
+#   api_keys import THIS_FILE && rm -P THIS_FILE
+# The file holds plaintext secrets until you delete it.
+EOF
+
+  for item in "${SELECTED[@]}"; do
+    label="${item%%:*}"
+    env_name="${item##*:}"
+    printf '\n# %s\n%s=\n' "$label" "$env_name"
+  done
+}
+
+# Read NAME=value lines and save each one. Nothing touches the Keychain until the
+# whole block has been read and every name resolved, so a typo in line 3 cannot
+# leave you with a half-applied paste.
+cmd_import() {
+  local src="${1:-}"
+  local line name value item env_name known
+  local names=() values=() blanks=()
+  local unknown=0 count=0 i j
+
+  if [[ -n "$src" ]]; then
+    if [[ ! -r "$src" ]]; then
+      printf 'Cannot read %s\n' "$src" >&2
+      exit 2
+    fi
+    exec <"$src"
+  elif [[ -t 0 ]]; then
+    echo "Paste NAME=value lines, one per line, then press Ctrl-D." >&2
+    echo "Input is echoed by the terminal; run in a window you can clear afterwards." >&2
+    echo >&2
+  fi
+
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    line="${line%$'\r'}"
+    line="$(trim "$line")"
+    [[ -z "$line" ]] && continue
+    case "$line" in \#*) continue ;; esac
+    line="${line#export }"
+
+    if [[ "$line" == *"="* ]]; then
+      name="${line%%=*}"
+      value="${line#*=}"
+    elif [[ "$line" == *":"* ]]; then
+      name="${line%%:*}"
+      value="${line#*:}"
+    else
+      printf 'Ignored (no NAME=value): %s\n' "$line" >&2
+      unknown=1
+      continue
+    fi
+
+    name="$(upper "$(trim "$name")")"
+    value="$(trim "$value")"
+    # Tolerate a quoted value, the shape `api_keys export` emits.
+    case "$value" in
+      \'*\') value="${value#\'}"; value="${value%\'}" ;;
+      \"*\") value="${value#\"}"; value="${value%\"}" ;;
+    esac
+
+    # A template line left blank is normal, but a name whose value went missing
+    # in the paste looks exactly the same, so say which ones came through empty
+    # instead of dropping them without a word.
+    if [[ -z "$value" ]]; then
+      blanks[${#blanks[@]}]="$name"
+      continue
+    fi
+
+    known=0
+    for item in "${NAMES[@]}"; do
+      env_name="${item##*:}"
+      if [[ "$name" == "$env_name" ]]; then
+        known=1
+        break
+      fi
+    done
+
+    if [[ "$known" -eq 0 ]]; then
+      printf 'Unknown key name: %s\n' "$name" >&2
+      unknown=1
+      continue
+    fi
+
+    # Two lines for one slot means the second silently wins and one key is lost
+    # without a trace -- the exact way a multi-account paste goes wrong.
+    i=0
+    while [[ "$i" -lt "$count" ]]; do
+      if [[ "${names[$i]}" == "$name" ]]; then
+        printf 'Duplicate name in this block: %s appears twice.\n' "$name" >&2
+        printf 'Each slot takes one key -- did you mean a different slot for the second?\n' >&2
+        unknown=1
+      fi
+      i=$((i + 1))
+    done
+
+    names[$count]="$name"
+    values[$count]="$value"
+    count=$((count + 1))
+  done
+
+  if [[ "${#blanks[@]}" -gt 0 ]]; then
+    printf 'Empty value, nothing saved for: %s\n' "${blanks[*]}" >&2
+  fi
+
+  if [[ "$unknown" -eq 1 ]]; then
+    printf 'Nothing was saved. Run `api_keys list` to see the available names.\n' >&2
+    exit 2
+  fi
+
+  if [[ "$count" -eq 0 ]]; then
+    echo "No values found. Nothing saved." >&2
+    exit 2
+  fi
+
+  i=0
+  while [[ "$i" -lt "$count" ]]; do
+    save_key "${names[$i]}" "${values[$i]}"
+    i=$((i + 1))
+  done
+
+  # Pasting the same account into two slots is the failure this whole flow
+  # exists to avoid, so say it out loud rather than leaving it to `list`.
+  i=0
+  while [[ "$i" -lt "$count" ]]; do
+    j=$((i + 1))
+    while [[ "$j" -lt "$count" ]]; do
+      if [[ "${values[$i]}" == "${values[$j]}" ]]; then
+        printf 'Warning: %s and %s hold the same key.\n' "${names[$i]}" "${names[$j]}" >&2
+      fi
+      j=$((j + 1))
+    done
+    i=$((i + 1))
   done
 }
 
 cmd_export() {
   local item env_name value
 
-  for item in "${NAMES[@]}"; do
+  select_items "$@"
+
+  for item in "${SELECTED[@]}"; do
     env_name="${item##*:}"
     if value="$(get_key "$env_name")"; then
       printf "export %s=%s\n" "$env_name" "$(shell_quote "$value")"
@@ -107,16 +444,45 @@ cmd_export() {
 }
 
 cmd_list() {
-  local item label env_name
+  local item label env_name value digest note
+  local seen_digests=() seen_names=() i
 
-  for item in "${NAMES[@]}"; do
+  select_items "$@"
+
+  for item in "${SELECTED[@]}"; do
     label="${item%%:*}"
     env_name="${item##*:}"
-    if has_key "$env_name"; then
-      printf "%-18s %s saved\n" "$label" "$env_name"
-    else
-      printf "%-18s %s missing\n" "$label" "$env_name"
+
+    if ! has_key "$env_name"; then
+      printf "%-18s %-21s missing\n" "$label" "$env_name"
+      continue
     fi
+
+    value="$(get_key "$env_name")"
+
+    # A base URL is not a secret and is the thing you actually need to eyeball.
+    case "$env_name" in
+      *_BASE_URL)
+        printf "%-18s %-21s saved  %s\n" "$label" "$env_name" "$value"
+        continue
+        ;;
+    esac
+
+    digest="$(digest_of "$value")"
+    note=""
+    i=0
+    while [[ "$i" -lt "${#seen_digests[@]}" ]]; do
+      if [[ "${seen_digests[$i]}" == "$digest" ]]; then
+        note="  <- same key as ${seen_names[$i]}"
+        break
+      fi
+      i=$((i + 1))
+    done
+    seen_digests[${#seen_digests[@]}]="$digest"
+    seen_names[${#seen_names[@]}]="$env_name"
+
+    printf "%-18s %-21s saved  (%s)%s\n" \
+      "$label" "$env_name" "$(fingerprint "$value")" "$note"
   done
 }
 
@@ -198,8 +564,10 @@ http_post_json_bearer() {
   fi
 }
 
+# Anthropic answers /v1/models with 200 on an account whose balance is spent and
+# only fails at /v1/messages, with 400 rather than the 402 you would expect.
 http_get_anthropic() {
-  local key status tmp curl_rc
+  local key status tmp curl_rc detail
   if ! key="$(get_key_or_env ANTHROPIC_API_KEY)" || [[ -z "$key" ]]; then
     print_test_result "Claude/Anthropic" "MISSING"
     return 0
@@ -207,19 +575,39 @@ http_get_anthropic() {
 
   tmp="$(mktemp)"
   set +e
-  status="$(curl -sS -m 25 -o "$tmp" -w "%{http_code}" \
+  status="$(curl -sS -m 60 -o "$tmp" -w "%{http_code}" \
+    -X POST \
     -H "x-api-key: $key" \
     -H "anthropic-version: 2023-06-01" \
-    "https://api.anthropic.com/v1/models" 2>/dev/null)"
+    -H "Content-Type: application/json" \
+    --data '{"model":"claude-haiku-4-5-20251001","max_tokens":1,"messages":[{"role":"user","content":"hi"}]}' \
+    "https://api.anthropic.com/v1/messages" 2>/dev/null)"
   curl_rc=$?
   set -e
-  rm -f "$tmp"
 
   if [[ "$curl_rc" -ne 0 ]]; then
+    rm -f "$tmp"
     print_test_result "Claude/Anthropic" "CURL_ERROR" "curl exit $curl_rc"
-  else
-    print_test_result "Claude/Anthropic" "$status"
+    return 0
   fi
+
+  if [[ "$status" == "200" ]]; then
+    rm -f "$tmp"
+    print_test_result "Claude/Anthropic" "200"
+    return 0
+  fi
+
+  if is_quota_error "$tmp"; then
+    detail="$(api_error_message "$tmp")"
+    rm -f "$tmp"
+    printf "%-18s NO QUOTA  https://api.anthropic.com -- key is valid, account cannot serve: %s\n" \
+      "Claude/Anthropic" "$detail"
+    return 0
+  fi
+
+  detail="$(api_error_message "$tmp")"
+  rm -f "$tmp"
+  print_test_result "Claude/Anthropic" "$status" "$detail"
 }
 
 http_test_lark() {
@@ -255,26 +643,670 @@ http_test_lark() {
   rm -f "$tmp"
 }
 
+# Percent-encode everything outside the unreserved set. printf %q is shell
+# quoting, not URL quoting, and bash 3.2 has no better primitive, so this walks
+# the string; what gets signed here is short and ASCII.
+urlencode() {
+  local string="$1" out="" len i c
+  len="${#string}"
+  i=0
+
+  while [[ "$i" -lt "$len" ]]; do
+    c="${string:$i:1}"
+    case "$c" in
+      [a-zA-Z0-9.~_-]) out="$out$c" ;;
+      *) out="$out$(printf '%%%02X' "'$c")" ;;
+    esac
+    i=$((i + 1))
+  done
+
+  printf '%s' "$out"
+}
+
+# Webull signs the request rather than presenting the secret: no endpoint takes
+# an App Secret, so `test` has to reproduce the algorithm exactly or it cannot
+# tell a wrong secret from a wrong implementation. Checked against the worked
+# example on the docs' signature page (path /trade/place_order, App Secret
+# 0f50a2e8...c1f, expected signature kvlS6opdZDhEBo5jq40nHYXaLvM=).
+# The signing key is the App Secret with a trailing '&'; the secret is never
+# sent as a header.
+webull_signature() {
+  local secret="$1" algo="$2" string_to_sign="$3" digest
+
+  case "$algo" in
+    HMAC-SHA256) digest="sha256" ;;
+    HMAC-SHA1) digest="sha1" ;;
+    *) return 1 ;;
+  esac
+
+  urlencode "$string_to_sign" |
+    openssl dgst -"$digest" -hmac "$secret&" -binary |
+    openssl base64 -A
+}
+
+# One signed GET against the instrument list -- the lightest call that a plain
+# App Key + App Secret can make. Trading and account calls additionally carry the
+# 2FA x-access-token issued through the Webull app, which this deliberately does
+# not touch. Results come back in these globals.
+WEBULL_STATUS=""
+WEBULL_CODE=""
+WEBULL_DETAIL=""
+webull_probe_once() {
+  local host="$1" algo="$2" app_key="$3" app_secret="$4"
+  local path="/openapi/instrument/stock/list"
+  local query="symbols=AAPL&category=US_STOCK&page_size=1"
+  local timestamp nonce signed signature tmp status curl_rc
+
+  WEBULL_STATUS=""
+  WEBULL_CODE=""
+  WEBULL_DETAIL=""
+
+  timestamp="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  nonce="$(uuidgen | tr -d '-' | tr '[:upper:]' '[:lower:]')"
+
+  # Query parameters and signing headers go into one collection, sorted by name
+  # and joined name=value with '&', prefixed by the path. A GET has no body, so
+  # no body digest is appended. Host is signed; curl sets it from the URL.
+  signed="$(printf '%s\n' \
+    "category=US_STOCK" \
+    "host=$host" \
+    "page_size=1" \
+    "symbols=AAPL" \
+    "x-app-key=$app_key" \
+    "x-signature-algorithm=$algo" \
+    "x-signature-nonce=$nonce" \
+    "x-signature-version=1.0" \
+    "x-timestamp=$timestamp" | LC_ALL=C sort | tr '\n' '&')"
+  signed="$path&${signed%&}"
+
+  if ! signature="$(webull_signature "$app_secret" "$algo" "$signed")"; then
+    WEBULL_STATUS="SIGN_ERROR"
+    WEBULL_DETAIL="unsupported signature algorithm $algo"
+    return 0
+  fi
+
+  tmp="$(mktemp)"
+  set +e
+  status="$(curl -sS -m 25 -o "$tmp" -w "%{http_code}" \
+    -H "x-app-key: $app_key" \
+    -H "x-timestamp: $timestamp" \
+    -H "x-signature: $signature" \
+    -H "x-signature-algorithm: $algo" \
+    -H "x-signature-version: 1.0" \
+    -H "x-signature-nonce: $nonce" \
+    -H "x-version: v2" \
+    "https://$host$path?$query" 2>/dev/null)"
+  curl_rc=$?
+  set -e
+
+  if [[ "$curl_rc" -ne 0 ]]; then
+    rm -f "$tmp"
+    WEBULL_STATUS="CURL_ERROR"
+    WEBULL_DETAIL="curl exit $curl_rc"
+    return 0
+  fi
+
+  WEBULL_STATUS="$status"
+  WEBULL_CODE="$(json_field "$tmp" error_code)"
+  WEBULL_DETAIL="$(api_error_message "$tmp")"
+  rm -f "$tmp"
+}
+
+http_test_webull() {
+  local app_key app_secret host algo
+  local hosts=() last_status="" last_detail=""
+
+  app_key="$(get_key_or_env WEBULL_APP_KEY || true)"
+  app_secret="$(get_key_or_env WEBULL_APP_SECRET || true)"
+
+  if [[ -z "$app_key" || -z "$app_secret" ]]; then
+    print_test_result "Webull" "MISSING"
+    return 0
+  fi
+
+  if [[ -n "${WEBULL_API_HOST:-}" ]]; then
+    hosts=("$WEBULL_API_HOST")
+  else
+    hosts=("${WEBULL_API_HOSTS[@]}")
+  fi
+
+  for host in "${hosts[@]}"; do
+    for algo in "${WEBULL_SIGN_ALGORITHMS[@]}"; do
+      webull_probe_once "$host" "$algo" "$app_key" "$app_secret"
+
+      if [[ "$WEBULL_STATUS" == "200" ]]; then
+        printf "%-18s OK        %s (%s)\n" "Webull" "$host" "$algo"
+        return 0
+      fi
+
+      # 401 is Webull's one answer to a wrong App Key, a wrong App Secret, an
+      # unaccepted algorithm and a key from another region alike -- signing with
+      # credentials that do not exist and sending an outright garbage signature
+      # both return the same UNAUTHORIZED body. So a 401 rules out this
+      # host+algorithm and nothing more; keep probing.
+      if [[ "$WEBULL_STATUS" == "401" || "$WEBULL_STATUS" == "CURL_ERROR" \
+        || "$WEBULL_STATUS" == "SIGN_ERROR" ]]; then
+        last_status="$WEBULL_STATUS"
+        last_detail="$host${WEBULL_DETAIL:+: $WEBULL_DETAIL}"
+        continue
+      fi
+
+      # Anything else is past the 401 gate: the credentials were recognised and
+      # the call itself was refused -- entitlement, IP allow-list, rate limit.
+      printf "%-18s DENIED    %s (%s) -- credentials passed auth, call refused: HTTP %s%s%s\n" \
+        "Webull" "$host" "$algo" "$WEBULL_STATUS" \
+        "${WEBULL_CODE:+ $WEBULL_CODE}" "${WEBULL_DETAIL:+ -- $WEBULL_DETAIL}"
+      return 0
+    done
+  done
+
+  print_test_result "Webull" "$last_status" \
+    "no host accepted the credentials; last $last_detail"
+}
+
+http_test_exa() {
+  local key status tmp curl_rc
+  if ! key="$(get_key_or_env EXA_API_KEY)" || [[ -z "$key" ]]; then
+    print_test_result "Exa Search" "MISSING"
+    return 0
+  fi
+
+  tmp="$(mktemp)"
+  set +e
+  status="$(curl -sS -m 25 -o "$tmp" -w "%{http_code}" \
+    -X POST -H "x-api-key: $key" -H "Content-Type: application/json" \
+    --data '{"query":"ping","numResults":1}' \
+    "https://api.exa.ai/search" 2>/dev/null)"
+  curl_rc=$?
+  set -e
+  rm -f "$tmp"
+
+  if [[ "$curl_rc" -ne 0 ]]; then
+    print_test_result "Exa Search" "CURL_ERROR" "curl exit $curl_rc"
+  else
+    print_test_result "Exa Search" "$status"
+  fi
+}
+
+# Tailscale ships two different credentials and only one of them is testable.
+#
+#   TAILSCALE_API_KEY  (tskey-api-...)  a normal bearer token -> probe it directly.
+#   TAILSCALE_AUTHKEY  (tskey-auth-...) a node-enrollment credential. There is no
+#                      endpoint that validates it; the only way to "use" it is to
+#                      register a machine, which consumes a one-off key and adds a
+#                      device. So we never spend it. Instead, when the API key is
+#                      also present, we look the auth key up by its ID (the middle
+#                      field of tskey-auth-<id>-<secret>) in GET /tailnet/-/keys,
+#                      which proves it exists, and reports revoked/expired state.
+#                      With no API key we can only check the shape and say so.
+http_test_tailscale() {
+  local api authkey status tmp curl_rc count keyid found
+
+  api="$(get_key_or_env TAILSCALE_API_KEY 2>/dev/null || true)"
+  authkey="$(get_key_or_env TAILSCALE_AUTHKEY 2>/dev/null || true)"
+
+  if [[ -z "$api" ]]; then
+    print_test_result "Tailscale API" "MISSING"
+  else
+    tmp="$(mktemp)"
+    set +e
+    status="$(curl -sS -m 25 -o "$tmp" -w "%{http_code}" \
+      -H "Authorization: Bearer $api" \
+      "https://api.tailscale.com/api/v2/tailnet/-/devices" 2>/dev/null)"
+    curl_rc=$?
+    set -e
+    if [[ "$curl_rc" -ne 0 ]]; then
+      print_test_result "Tailscale API" "CURL_ERROR" "curl exit $curl_rc"
+    elif [[ "$status" == "200" ]]; then
+      count="$(grep -o '"nodeId"' "$tmp" | wc -l | tr -d ' ')"
+      print_test_result "Tailscale API" "200"
+      printf "%-18s   tailnet 有 %s 台设备\n" "" "$count"
+    else
+      print_test_result "Tailscale API" "$status"
+    fi
+    rm -f "$tmp"
+  fi
+
+  if [[ -z "$authkey" ]]; then
+    print_test_result "Tailscale Auth" "MISSING"
+    return 0
+  fi
+
+  case "$authkey" in
+    tskey-auth-*) ;;
+    *)
+      printf "%-18s FAIL 前缀不是 tskey-auth-（API key 和 auth key 可能填反了）\n" "Tailscale Auth"
+      return 0
+      ;;
+  esac
+
+  if [[ -z "$api" ]]; then
+    printf "%-18s SKIP 格式正确；没有 API key，无法在不消耗它的前提下验证\n" "Tailscale Auth"
+    return 0
+  fi
+
+  # tskey-auth-<id>-<secret>; take the field between the 3rd and 4th dash.
+  keyid="$(printf '%s' "$authkey" | cut -d- -f3)"
+  tmp="$(mktemp)"
+  set +e
+  status="$(curl -sS -m 25 -o "$tmp" -w "%{http_code}" \
+    -H "Authorization: Bearer $api" \
+    "https://api.tailscale.com/api/v2/tailnet/-/keys" 2>/dev/null)"
+  curl_rc=$?
+  set -e
+  if [[ "$curl_rc" -ne 0 ]]; then
+    print_test_result "Tailscale Auth" "CURL_ERROR" "curl exit $curl_rc"
+  elif [[ "$status" != "200" ]]; then
+    print_test_result "Tailscale Auth" "$status" "列举 keys 失败"
+  else
+    found=""
+    grep -q "\"$keyid\"" "$tmp" && found=1
+    if [[ -n "$found" ]]; then
+      print_test_result "Tailscale Auth" "200"
+      printf "%-18s   key id %s 在 tailnet 中存在（未消耗它）\n" "" "$keyid"
+    else
+      printf "%-18s FAIL key id %s 不在 tailnet 的 key 列表里（已撤销/过期/属于别的 tailnet）\n" \
+        "Tailscale Auth" "$keyid"
+    fi
+  fi
+  rm -f "$tmp"
+}
+
+# Every provider here answers GET /models with HTTP 200 for an account that can
+# no longer serve a single token -- Kimi 403 "reached your usage limit", GLM 429
+# code 1113 "余额不足", Anthropic 400 "credit balance is too low". Listing models
+# proves only that the key authenticates, so every probe spends one real token
+# before reporting OK, and the verdict comes from the body, not the status code
+# (the three providers above use 403, 429 and 400 for the same condition).
+is_quota_error() {
+  grep -qiE '1113|余额不足|usage limit|insufficient balance|credit balance|resource package|out of credit|quota' "$1"
+}
+
+# Listing a model does not mean it can answer a chat completion: embeddings,
+# audio, image and moderation models all appear in /models and would fail with a
+# model-shaped error that has nothing to do with the key.
+is_chat_model() {
+  case "$(lower "$1")" in
+    *embed*|*whisper*|*tts*|*audio*|*speech*|*dall-e*|*image*|*moderation*|*rerank*|*vision-only*)
+      return 1 ;;
+  esac
+  return 0
+}
+
+# Spend one token against a root, trying a few models so a single unusable model
+# is not mistaken for a dead key. Results come back in these globals.
+CHAT_SERVED=""
+CHAT_QUOTA=""
+CHAT_DETAIL=""
+CHAT_STATUS=""
+try_chat_models() {
+  local key="$1" root="$2" models="$3" limit="${4:-4}"
+  local model tmp status curl_rc attempts=0
+
+  CHAT_SERVED=""
+  CHAT_QUOTA=""
+  CHAT_DETAIL=""
+  CHAT_STATUS=""
+
+  for model in $models; do
+    is_chat_model "$model" || continue
+    [[ "$attempts" -ge "$limit" ]] && break
+    attempts=$((attempts + 1))
+
+    tmp="$(mktemp)"
+    set +e
+    status="$(curl -sS -m 60 -o "$tmp" -w "%{http_code}" \
+      -X POST \
+      -H "Authorization: Bearer $key" \
+      -H "Content-Type: application/json" \
+      --data "{\"model\":\"$model\",\"messages\":[{\"role\":\"user\",\"content\":\"hi\"}],\"max_tokens\":1}" \
+      "$root/chat/completions" 2>/dev/null)"
+    curl_rc=$?
+    set -e
+
+    if [[ "$curl_rc" -ne 0 ]]; then
+      rm -f "$tmp"
+      CHAT_STATUS="CURL_ERROR"
+      CHAT_DETAIL="curl exit $curl_rc"
+      continue
+    fi
+
+    CHAT_STATUS="$status"
+    if [[ "$status" == "200" ]]; then
+      rm -f "$tmp"
+      CHAT_SERVED="$model"
+      return 0
+    fi
+
+    if is_quota_error "$tmp"; then
+      CHAT_QUOTA="$model"
+    fi
+    CHAT_DETAIL="$(api_error_message "$tmp")"
+    rm -f "$tmp"
+  done
+
+  return 0
+}
+
+api_error_message() {
+  local msg
+  msg="$(grep -o '"message"[[:space:]]*:[[:space:]]*"[^"]*"' "$1" | head -1 |
+    sed 's/.*:[[:space:]]*"//; s/"$//')" || true
+  printf '%.90s' "$msg"
+}
+
+all_model_ids() {
+  local ids
+  ids="$(grep -o '"id"[[:space:]]*:[[:space:]]*"[^"]*"' "$1" |
+    sed 's/.*:[[:space:]]*"//; s/"$//')" || true
+  printf '%s' "$ids"
+}
+
+json_field() {
+  local value
+  value="$(grep -o "\"$2\"[[:space:]]*:[[:space:]]*\"[^\"]*\"" "$1" | head -1 |
+    sed 's/.*:[[:space:]]*"//; s/"$//')" || true
+  printf '%s' "$value"
+}
+
+# Holding several accounts only buys headroom if they really are several
+# accounts -- one account can issue many keys that share one quota, and two such
+# keys look completely different. Kimi answers GET /me with the owning account,
+# so `test` names it and cmd_test flags two slots that resolve to the same one.
+# Empty means "this provider has no identity endpoint"; the caller sets it.
+PROBE_IDENTITY_PATH=""
+IDENTITY_SLOTS=()
+IDENTITY_VALUES=()
+
+account_identity() {
+  local key="$1" url="$2"
+  local tmp status ident
+
+  [[ -z "$PROBE_IDENTITY_PATH" ]] && return 0
+
+  tmp="$(mktemp)"
+  set +e
+  status="$(curl -sS -m 15 -o "$tmp" -w "%{http_code}" \
+    -H "Authorization: Bearer $key" \
+    "$url/$PROBE_IDENTITY_PATH" 2>/dev/null)"
+  set -e
+
+  if [[ "$status" != "200" ]]; then
+    rm -f "$tmp"
+    return 0
+  fi
+
+  ident="$(json_field "$tmp" email)"
+  [[ -z "$ident" ]] && ident="$(json_field "$tmp" user_id)"
+  rm -f "$tmp"
+  printf '%s' "$ident"
+}
+
+record_identity() {
+  local slot="$1" ident="$2"
+  [[ -z "$ident" ]] && return 0
+  IDENTITY_SLOTS[${#IDENTITY_SLOTS[@]}]="$slot"
+  IDENTITY_VALUES[${#IDENTITY_VALUES[@]}]="$ident"
+}
+
+report_shared_accounts() {
+  local i j
+  i=0
+  while [[ "$i" -lt "${#IDENTITY_VALUES[@]}" ]]; do
+    j=$((i + 1))
+    while [[ "$j" -lt "${#IDENTITY_VALUES[@]}" ]]; do
+      if [[ "${IDENTITY_VALUES[$i]}" == "${IDENTITY_VALUES[$j]}" ]]; then
+        printf '\nWarning: %s and %s are different keys on the SAME account (%s);\n' \
+          "${IDENTITY_SLOTS[$i]}" "${IDENTITY_SLOTS[$j]}" "${IDENTITY_VALUES[$i]}"
+        printf '         they share one quota, so holding both buys no headroom.\n'
+      fi
+      j=$((j + 1))
+    done
+    i=$((i + 1))
+  done
+}
+
+# Probe OpenAI-shaped roots in order; the first one that both authenticates the
+# key and answers a completion is the api_root for that account.
+probe_openai_roots() {
+  local name="$1" env_name="$2"
+  shift 2
+
+  local key url status tmp curl_rc models detail ident
+  local last_status="" last_detail=""
+
+  if ! key="$(get_key_or_env "$env_name")" || [[ -z "$key" ]]; then
+    print_test_result "$name" "MISSING"
+    return 0
+  fi
+
+  for url in "$@"; do
+    tmp="$(mktemp)"
+    set +e
+    status="$(curl -sS -m 25 -o "$tmp" -w "%{http_code}" \
+      -H "Authorization: Bearer $key" \
+      "$url/models" 2>/dev/null)"
+    curl_rc=$?
+    set -e
+
+    if [[ "$curl_rc" -ne 0 ]]; then
+      rm -f "$tmp"
+      last_status="CURL_ERROR"
+      last_detail="curl exit $curl_rc at $url"
+      continue
+    fi
+
+    if [[ "$status" != "200" ]]; then
+      rm -f "$tmp"
+      last_status="$status"
+      last_detail="$url"
+      continue
+    fi
+
+    models="$(all_model_ids "$tmp")"
+    rm -f "$tmp"
+
+    if [[ -z "$models" ]]; then
+      last_status="$status"
+      last_detail="$url returned no model id"
+      continue
+    fi
+
+    try_chat_models "$key" "$url" "$models"
+
+    if [[ "$CHAT_STATUS" == "CURL_ERROR" && -z "$CHAT_SERVED" ]]; then
+      last_status="CURL_ERROR"
+      last_detail="${CHAT_DETAIL} at $url"
+      continue
+    fi
+
+    if [[ -n "$CHAT_SERVED" ]]; then
+      ident="$(account_identity "$key" "$url")"
+      record_identity "$name" "$ident"
+      # Trying several models is what keeps an unusable first model from looking
+      # like a dead key -- but it also means a free model can answer for an
+      # account whose paid models are all refused, which is how `glm-4-flash`
+      # certified a zero-balance GLM account for five days. If any model came
+      # back with a quota error, that is part of the verdict, not a footnote.
+      if [[ -n "$CHAT_QUOTA" ]]; then
+        printf "%-18s PARTIAL   %s (served %s; %s is out of quota)%s\n" \
+          "$name" "$url" "$CHAT_SERVED" "$CHAT_QUOTA" "${ident:+  account: $ident}"
+      else
+        printf "%-18s OK        %s (%s)%s\n" \
+          "$name" "$url" "$CHAT_SERVED" "${ident:+  account: $ident}"
+      fi
+      return 0
+    fi
+
+    if [[ -n "$CHAT_QUOTA" ]]; then
+      ident="$(account_identity "$key" "$url")"
+      record_identity "$name" "$ident"
+      printf "%-18s NO QUOTA  %s%s -- key is valid, account cannot serve: %s\n" \
+        "$name" "$url" "${ident:+  account: $ident}" "$CHAT_DETAIL"
+      return 0
+    fi
+
+    last_status="$CHAT_STATUS"
+    last_detail="$url${CHAT_DETAIL:+: $CHAT_DETAIL}"
+  done
+
+  print_test_result "$name" "$last_status" "no root served the key; last $last_detail"
+}
+
+http_test_litellm() {
+  local key base status tmp curl_rc detail
+
+  if ! key="$(get_key_or_env LITELLM_API_KEY)" || [[ -z "$key" ]]; then
+    print_test_result "LiteLLM" "MISSING"
+    return 0
+  fi
+
+  base="$(get_key_or_env LITELLM_BASE_URL || true)"
+  base="${base:-http://127.0.0.1:4000}"
+  base="${base%/}"
+
+  tmp="$(mktemp)"
+  set +e
+  status="$(curl -sS -m 25 -o "$tmp" -w "%{http_code}" \
+    -H "Authorization: Bearer $key" \
+    "$base/v1/models" 2>/dev/null)"
+  curl_rc=$?
+  set -e
+
+  if [[ "$curl_rc" -ne 0 ]]; then
+    rm -f "$tmp"
+    print_test_result "LiteLLM" "CURL_ERROR" "curl exit $curl_rc at $base"
+    return 0
+  fi
+
+  if [[ "$status" == "200" ]]; then
+    local models count scope
+
+    models="$(grep -o '"id"[[:space:]]*:[[:space:]]*"[^"]*"' "$tmp" |
+      sed 's/.*:[[:space:]]*"//; s/"$//')" || true
+    rm -f "$tmp"
+    count="$(printf '%s\n' "$models" | grep -c . )" || true
+
+    # /key/info is admin-gated, so it separates a full-access key from a virtual
+    # one scoped to a few models -- both list models, only one manages keys.
+    set +e
+    status="$(curl -sS -m 25 -o /dev/null -w "%{http_code}" \
+      -H "Authorization: Bearer $key" \
+      "$base/key/info" 2>/dev/null)"
+    set -e
+    if [[ "$status" == "200" ]]; then
+      scope="full access"
+    else
+      scope="/key/info HTTP $status, not full access"
+    fi
+
+    # A gateway is a fan-out: one upstream being out of quota does not make the
+    # proxy or the key bad, so try a few models before calling it dead.
+    try_chat_models "$key" "$base/v1" "$models"
+
+    if [[ -n "$CHAT_SERVED" ]]; then
+      printf "%-18s OK        %s (%s, %s models, served %s)%s\n" \
+        "LiteLLM" "$base" "$scope" "$count" "$CHAT_SERVED" \
+        "${CHAT_QUOTA:+ -- note: $CHAT_QUOTA upstream is out of quota}"
+    elif [[ -n "$CHAT_QUOTA" ]]; then
+      printf "%-18s NO QUOTA  %s (%s) -- no model served, %s upstream is out of quota\n" \
+        "LiteLLM" "$base" "$scope" "$CHAT_QUOTA"
+    else
+      printf "%-18s FAIL      %s (%s) -- no model served: %s\n" \
+        "LiteLLM" "$base" "$scope" "${CHAT_DETAIL:-unknown error}"
+    fi
+    return 0
+  fi
+
+  detail="$(api_error_message "$tmp")"
+  rm -f "$tmp"
+  print_test_result "LiteLLM" "$status" "$base${detail:+: $detail}"
+}
+
+# Empty TEST_FILTER means "run everything"; otherwise it holds the space-delimited
+# env names selected on the command line.
+TEST_FILTER=""
+want() {
+  local name
+
+  [[ -z "$TEST_FILTER" ]] && return 0
+
+  for name in "$@"; do
+    case "$TEST_FILTER" in
+      *" $name "*) return 0 ;;
+    esac
+  done
+
+  return 1
+}
+
 cmd_test() {
+  local item
+
+  if [[ "$#" -gt 0 ]]; then
+    select_items "$@"
+    TEST_FILTER=" "
+    for item in "${SELECTED[@]}"; do
+      TEST_FILTER="$TEST_FILTER${item##*:} "
+    done
+  fi
+
   echo "Testing saved keys. No secrets will be printed."
 
-  http_get_bearer "OpenAI" "OPENAI_API_KEY" "https://api.openai.com/v1/models"
-  http_get_anthropic
-  http_get_bearer "DeepSeek" "DEEPSEEK_API_KEY" "https://api.deepseek.com/models"
-  http_post_json_bearer "GLM/Zhipu" "GLM_API_KEY" \
-    "https://open.bigmodel.cn/api/paas/v4/chat/completions" \
-    '{"model":"glm-4-flash","messages":[{"role":"user","content":"hi"}],"max_tokens":1}'
-  http_get_bearer "Notion" "NOTION_API_KEY" "https://api.notion.com/v1/users/me" \
-    -H "Notion-Version: 2026-03-11"
-  http_test_lark
-  http_get_bearer "Fireworks" "FIREWORKS_API_KEY" "https://api.fireworks.ai/inference/v1/models"
-  http_get_bearer "MiniMax" "MINIMAX_API_KEY" "https://api.minimax.io/v1/models"
+  want OPENAI_API_KEY &&
+    probe_openai_roots "OpenAI" "OPENAI_API_KEY" "https://api.openai.com/v1"
+  want ANTHROPIC_API_KEY &&
+    http_get_anthropic
+  want DEEPSEEK_API_KEY &&
+    probe_openai_roots "DeepSeek" "DEEPSEEK_API_KEY" "https://api.deepseek.com"
+  want GLM_API_KEY &&
+    probe_openai_roots "GLM/Zhipu" "GLM_API_KEY" "${GLM_PLATFORM_API_ROOTS[@]}"
+  want GLM_CODING_API_KEY &&
+    probe_openai_roots "GLM Coding 1" "GLM_CODING_API_KEY" "${GLM_CODING_API_ROOTS[@]}"
+  want GLM_CODING_API_KEY_2 &&
+    probe_openai_roots "GLM Coding 2" "GLM_CODING_API_KEY_2" "${GLM_CODING_API_ROOTS[@]}"
+  PROBE_IDENTITY_PATH="me"
+  want KIMI_API_KEY &&
+    probe_openai_roots "Kimi Code 1" "KIMI_API_KEY" "${KIMI_API_ROOTS[@]}"
+  want KIMI_API_KEY_2 &&
+    probe_openai_roots "Kimi Code 2" "KIMI_API_KEY_2" "${KIMI_API_ROOTS[@]}"
+  want KIMI_API_KEY_3 &&
+    probe_openai_roots "Kimi Code 3" "KIMI_API_KEY_3" "${KIMI_API_ROOTS[@]}"
+  PROBE_IDENTITY_PATH=""
+  want LITELLM_API_KEY LITELLM_BASE_URL &&
+    http_test_litellm
+  want NOTION_API_KEY &&
+    http_get_bearer "Notion" "NOTION_API_KEY" "https://api.notion.com/v1/users/me" \
+      -H "Notion-Version: 2026-03-11"
+  want LARK_APP_ID LARK_APP_SECRET &&
+    http_test_lark
+  want FIREWORKS_API_KEY &&
+    probe_openai_roots "Fireworks" "FIREWORKS_API_KEY" "https://api.fireworks.ai/inference/v1"
+  # api.minimax.io rejects this key outright; the live roots are minimaxi.com
+  # and minimax.chat, so probe rather than hardcode the wrong one.
+  want MINIMAX_API_KEY &&
+    probe_openai_roots "MiniMax" "MINIMAX_API_KEY" "${MINIMAX_API_ROOTS[@]}"
+  want EXA_API_KEY &&
+    http_test_exa
+  want TAVILY_API_KEY &&
+    http_post_json_bearer "Tavily Search" "TAVILY_API_KEY" \
+      "https://api.tavily.com/search" '{"query":"ping","max_results":1}'
+  want WEBULL_APP_KEY WEBULL_APP_SECRET &&
+    http_test_webull
+  want TAILSCALE_API_KEY TAILSCALE_AUTHKEY &&
+    http_test_tailscale
+
+  report_shared_accounts
+
+  return 0
 }
 
 cmd_delete() {
   local item env_name
 
-  for item in "${NAMES[@]}"; do
+  select_items "$@"
+
+  for item in "${SELECTED[@]}"; do
     env_name="${item##*:}"
     if has_key "$env_name"; then
       security delete-generic-password -s "$KEYCHAIN_SERVICE" -a "$env_name" >/dev/null
@@ -286,11 +1318,13 @@ cmd_delete() {
 }
 
 case "${1:-}" in
-  set) cmd_set ;;
-  export) cmd_export ;;
-  test) cmd_test ;;
-  list) cmd_list ;;
-  delete) cmd_delete ;;
+  set) shift; cmd_set "$@" ;;
+  template) shift; cmd_template "$@" ;;
+  import) shift; cmd_import "$@" ;;
+  export) shift; cmd_export "$@" ;;
+  test) shift; cmd_test "$@" ;;
+  list) shift; cmd_list "$@" ;;
+  delete) shift; cmd_delete "$@" ;;
   -h|--help|help|"") usage ;;
   *)
     usage >&2
