@@ -6,7 +6,8 @@ KEYCHAIN_SERVICE="codex-api-keys"
 NAMES=(
   "OpenAI:OPENAI_API_KEY"
   "Claude/Anthropic:ANTHROPIC_API_KEY"
-  "DeepSeek:DEEPSEEK_API_KEY"
+  "DeepSeek 1:DEEPSEEK_API_KEY"
+  "DeepSeek 2:DEEPSEEK_API_KEY_2"
   "GLM/Zhipu:GLM_API_KEY"
   "GLM Coding 1:GLM_CODING_API_KEY"
   "GLM Coding 2:GLM_CODING_API_KEY_2"
@@ -63,6 +64,13 @@ MINIMAX_API_ROOTS=(
   "https://api.minimaxi.com/v1"
   "https://api.minimax.chat/v1"
   "https://api.minimax.io/v1"
+)
+
+# DeepSeek serves one root (the documented `/v1` suffix is an alias of it kept for
+# OpenAI-SDK compatibility, not a second family), named once because both slots
+# probe it.
+DEEPSEEK_API_ROOTS=(
+  "https://api.deepseek.com"
 )
 
 # Webull is one API behind a dozen regional hosts, and a key issued for one
@@ -1153,6 +1161,77 @@ probe_openai_roots() {
   print_test_result "$name" "$last_status" "no root served the key; last $last_detail"
 }
 
+# Two DeepSeek keys are two pools of credit only if they are two accounts, and
+# DeepSeek publishes no identity endpoint for record_identity to compare -- what it
+# does answer is GET /user/balance. So print each slot's balance under its result
+# and let two identical numbers speak for themselves; an equal balance is evidence
+# of one shared account, not proof, so this never claims the verdict itself.
+deepseek_balance() {
+  local env_name="$1"
+  local key tmp status currencies totals available line summary="" i
+  local currency_list=() total_list=()
+
+  key="$(get_key_or_env "$env_name")" || return 0
+  [[ -z "$key" ]] && return 0
+
+  tmp="$(mktemp)"
+  set +e
+  status="$(curl -sS -m 15 -o "$tmp" -w "%{http_code}" \
+    -H "Authorization: Bearer $key" \
+    "https://api.deepseek.com/user/balance" 2>/dev/null)"
+  set -e
+
+  if [[ "$status" != "200" ]]; then
+    rm -f "$tmp"
+    return 0
+  fi
+
+  # balance_infos is one entry per currency and USD comes first even when the
+  # account holds no dollars, so reading a single field reports "USD 0.00" for an
+  # account with CNY 88.62 in it (measured 2026-08-12). Zip every currency with
+  # its own total instead: the values appear in document order, and within each
+  # entry currency precedes total_balance, so the two lists line up.
+  currencies="$(grep -o '"currency"[[:space:]]*:[[:space:]]*"[^"]*"' "$tmp" |
+    sed 's/.*:[[:space:]]*"//; s/"$//')" || true
+  totals="$(grep -o '"total_balance"[[:space:]]*:[[:space:]]*"[^"]*"' "$tmp" |
+    sed 's/.*:[[:space:]]*"//; s/"$//')" || true
+  available="$(grep -o '"is_available"[[:space:]]*:[[:space:]]*[a-z]*' "$tmp" |
+    head -1 | sed 's/.*:[[:space:]]*//')" || true
+  rm -f "$tmp"
+
+  [[ -z "$totals" ]] && return 0
+
+  while IFS= read -r line; do
+    [[ -n "$line" ]] && currency_list[${#currency_list[@]}]="$line"
+  done <<EOF
+$currencies
+EOF
+  while IFS= read -r line; do
+    [[ -n "$line" ]] && total_list[${#total_list[@]}]="$line"
+  done <<EOF
+$totals
+EOF
+
+  i=0
+  while [[ "$i" -lt "${#total_list[@]}" ]]; do
+    summary="${summary:+$summary, }${currency_list[$i]:-?} ${total_list[$i]}"
+    i=$((i + 1))
+  done
+
+  if [[ "$available" == "false" ]]; then
+    printf "%-18s   balance %s -- is_available false, this account cannot serve\n" \
+      "" "$summary"
+  else
+    printf "%-18s   balance %s\n" "" "$summary"
+  fi
+  return 0
+}
+
+probe_deepseek() {
+  probe_openai_roots "$1" "$2" "${DEEPSEEK_API_ROOTS[@]}"
+  deepseek_balance "$2"
+}
+
 http_test_litellm() {
   local key base status tmp curl_rc detail
 
@@ -1258,7 +1337,9 @@ cmd_test() {
   want ANTHROPIC_API_KEY &&
     http_get_anthropic
   want DEEPSEEK_API_KEY &&
-    probe_openai_roots "DeepSeek" "DEEPSEEK_API_KEY" "https://api.deepseek.com"
+    probe_deepseek "DeepSeek 1" "DEEPSEEK_API_KEY"
+  want DEEPSEEK_API_KEY_2 &&
+    probe_deepseek "DeepSeek 2" "DEEPSEEK_API_KEY_2"
   want GLM_API_KEY &&
     probe_openai_roots "GLM/Zhipu" "GLM_API_KEY" "${GLM_PLATFORM_API_ROOTS[@]}"
   want GLM_CODING_API_KEY &&
