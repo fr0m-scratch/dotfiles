@@ -26,10 +26,14 @@ NAMES=(
   "Volcengine App ID:VOLC_APP_ID"
   "Volcengine Access Token:VOLC_ACCESS_KEY"
   "Volcengine Secret Key:VOLC_SECRET_KEY"
+  "Aliyun Key ID:ALIBABA_CLOUD_ACCESS_KEY_ID"
+  "Aliyun Key Secret:ALIBABA_CLOUD_ACCESS_KEY_SECRET"
   "Webull App Key:WEBULL_APP_KEY"
   "Webull App Secret:WEBULL_APP_SECRET"
   "Tailscale API:TAILSCALE_API_KEY"
   "Tailscale Auth Key:TAILSCALE_AUTHKEY"
+  "OpenBao Addr:BAO_ADDR"
+  "OpenBao Token:BAO_TOKEN"
 )
 
 # Kimi and GLM each serve several live, auth-gated roots and a given key is
@@ -100,6 +104,18 @@ WEBULL_SIGN_ALGORITHMS=(
   "HMAC-SHA1"
 )
 
+# OpenBao is the odd entry here: it is not a provider, it is the shared secret
+# manager the other keys can be published TO (`pool --sync-bao`). It earns a slot
+# because its token is a credential like any other -- it expires, it can be revoked,
+# and until now the only copy lived in a bare file that nothing checked. The names
+# are BAO_ADDR / BAO_TOKEN because that is what OpenBao's own CLI reads, so
+# `eval "$(api_keys export bao)"` is enough to run `bao` against it.
+#
+# The ADDRESS is deliberately a Keychain entry rather than a constant: this
+# repository is public, and where one company's secret manager lives is not
+# something a public dotfiles repo should state. `test` resolves it from
+# env -> Keychain -> ~/.api-keys-bao, so an existing pool config keeps working and
+# a machine with neither is simply reported as unconfigured.
 usage() {
   cat <<'EOF'
 Usage:
@@ -142,6 +158,13 @@ POOL — several keys for one provider, one name for the consumer:
   api_keys pool --refresh deepseek        re-probe instead of trusting the cache
   api_keys pool --sync-bao deepseek       also publish the winner to the shared
                                           secret manager (cas-guarded, read back)
+OPENBAO — the manager itself is an entry, not just a destination:
+  api_keys set bao            store BAO_ADDR and BAO_TOKEN
+  api_keys test openbao       is it sealed, what does the token grant, when does it
+                              expire, and can it actually read the shared records
+  eval "$(api_keys export bao)"   BAO_ADDR/BAO_TOKEN are what the `bao` CLI reads
+`pool --sync-bao` uses these slots too, falling back to ~/.api-keys-bao.
+
 The decision is cached at ~/.api-keys-pool for 12 h (API_KEYS_POOL_TTL_SECS);
 the cache holds slot names and digests, never a key. Replacing a key changes its
 digest and invalidates the entry by itself. `export` stays literal: it dumps every
@@ -243,12 +266,24 @@ digest_of() {
   printf '%s' "$1" | shasum -a 256 | cut -c1-8
 }
 
+# A selector is what a person types, and the name of a thing is not always the
+# prefix of its variables. OpenBao's own CLI reads BAO_ADDR/BAO_TOKEN, but nobody
+# calls the product "bao" -- so map the spoken name onto the variable prefix rather
+# than letting `api_keys test openbao` fail on a name that is obviously right.
+selector_alias() {
+  case "$1" in
+    openbao) printf 'bao' ;;
+    aliyun|ali|阿里云|阿里) printf 'alibaba_cloud' ;;
+    *) printf '%s' "$1" ;;
+  esac
+}
+
 # Print the NAMES entries matching each selector, one per line.
 resolve_selectors() {
   local sel item label env_name norm_sel norm_env norm_label hit rc=0
 
   for sel in "$@"; do
-    norm_sel="$(lower "$sel")"
+    norm_sel="$(selector_alias "$(lower "$sel")")"
     hit=0
     for item in "${NAMES[@]}"; do
       label="${item%%:*}"
@@ -533,7 +568,7 @@ cmd_list() {
 
     # A base URL is not a secret and is the thing you actually need to eyeball.
     case "$env_name" in
-      *_BASE_URL)
+      *_BASE_URL|BAO_ADDR)
         printf "%-18s %-21s saved  %s\n" "$label" "$env_name" "$value"
         continue
         ;;
@@ -873,6 +908,167 @@ http_test_webull() {
 
   print_test_result "Webull" "$last_status" \
     "no host accepted the credentials; last $last_detail"
+}
+
+# --------------------------------------------------------------------------------
+# ALIYUN
+#
+# Like Webull, the secret is an HMAC key that is never transmitted, so `test` has to
+# reproduce Alibaba Cloud's RPC signature exactly or it cannot tell a wrong secret
+# from a wrong implementation. Verified against the worked example on the signature
+# page (AccessKeyId testid / AccessKeySecret testsecret, DescribeDedicatedHosts,
+# nonce edb2b34af0af9a6d14deaf7c1a5315eb, timestamp 2023-03-13T08:34:30Z ->
+# 9NaGiOspFP5UPcwX8Iwt2YJXXuk=), which `aliyun_signature_selftest` re-checks.
+#
+#   StringToSign = GET&%2F&<the canonicalized query, percent-encoded AGAIN>
+#   canonicalized query = every parameter except Signature, sorted by name,
+#                         each name and value percent-encoded, joined k=v with &
+#   HMAC-SHA1, key = AccessKeySecret + "&", base64, then URL-encoded into the query
+#
+# Alibaba Cloud calls this signature version deprecated in favour of V3
+# (ACS3-HMAC-SHA256); it is still accepted, and a 400 naming SignatureVersion is
+# what would say otherwise -- the probe prints the returned Code, so that failure
+# would be legible rather than mysterious.
+ALIYUN_STS_HOST="sts.aliyuncs.com"
+
+aliyun_signature() {
+  local secret="$1" string_to_sign="$2"
+
+  printf '%s' "$string_to_sign" |
+    openssl dgst -sha1 -hmac "$secret&" -binary |
+    openssl base64 -A
+}
+
+# Build the canonicalized query from name=value lines on stdin, then sign it.
+# Returns the full query string with Signature appended.
+ALIYUN_QUERY=""
+aliyun_sign_query() {
+  local secret="$1"
+  shift
+  local pair name value canonical="" string_to_sign signature
+
+  # Sorting by the raw name is the same order as sorting by the encoded name here:
+  # every parameter name is unreserved ASCII.
+  while IFS= read -r pair; do
+    [[ -z "$pair" ]] && continue
+    name="${pair%%=*}"
+    value="${pair#*=}"
+    canonical="${canonical:+$canonical&}$(urlencode "$name")=$(urlencode "$value")"
+  done <<EOF
+$(printf '%s\n' "$@" | LC_ALL=C sort)
+EOF
+
+  string_to_sign="GET&$(urlencode "/")&$(urlencode "$canonical")"
+  signature="$(aliyun_signature "$secret" "$string_to_sign")"
+  ALIYUN_QUERY="$canonical&Signature=$(urlencode "$signature")"
+  return 0
+}
+
+# The published vector, re-derived on every run of the probe. A signing routine
+# that has drifted must not be allowed to report FAIL on someone's key: that would
+# blame the credential for the code's mistake.
+aliyun_signature_selftest() {
+  local expected="9NaGiOspFP5UPcwX8Iwt2YJXXuk=" got
+
+  aliyun_sign_query "testsecret" \
+    "AccessKeyId=testid" \
+    "Action=DescribeDedicatedHosts" \
+    "Format=JSON" \
+    "RegionId=cn-beijing" \
+    "SignatureMethod=HMAC-SHA1" \
+    "SignatureNonce=edb2b34af0af9a6d14deaf7c1a5315eb" \
+    "SignatureVersion=1.0" \
+    "Timestamp=2023-03-13T08:34:30Z" \
+    "Version=2014-05-26"
+
+  got="${ALIYUN_QUERY##*&Signature=}"
+  [[ "$got" == "$(urlencode "$expected")" ]]
+}
+
+# GetCallerIdentity is the one call every valid AccessKey can make: it needs no RAM
+# permission at all, so a refusal is about the credential and nothing else. It also
+# names the identity, which is what tells a RAM user apart from a root account key.
+http_test_aliyun() {
+  local key_id secret tmp status curl_rc code message arn account identity_type
+
+  if ! key_id="$(get_key_or_env ALIBABA_CLOUD_ACCESS_KEY_ID)" || [[ -z "$key_id" ]]; then
+    print_test_result "Aliyun" "MISSING"
+    return 0
+  fi
+
+  if ! secret="$(get_key_or_env ALIBABA_CLOUD_ACCESS_KEY_SECRET)" || [[ -z "$secret" ]]; then
+    printf "%-18s MISSING   key id is saved, secret is not\n" "Aliyun"
+    return 0
+  fi
+
+  if ! aliyun_signature_selftest; then
+    printf "%-18s FAIL      signing self-test failed; not blaming your key\n" "Aliyun"
+    return 0
+  fi
+
+  aliyun_sign_query "$secret" \
+    "AccessKeyId=$key_id" \
+    "Action=GetCallerIdentity" \
+    "Format=JSON" \
+    "SignatureMethod=HMAC-SHA1" \
+    "SignatureNonce=$(uuidgen | tr -d '-' | tr '[:upper:]' '[:lower:]')" \
+    "SignatureVersion=1.0" \
+    "Timestamp=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+    "Version=2015-04-01"
+
+  tmp="$(mktemp)"
+  set +e
+  status="$(curl -sS -m 25 -o "$tmp" -w "%{http_code}" \
+    "https://$ALIYUN_STS_HOST/?$ALIYUN_QUERY" 2>/dev/null)"
+  curl_rc=$?
+  set -e
+
+  if [[ "$curl_rc" -ne 0 ]]; then
+    rm -f "$tmp"
+    print_test_result "Aliyun" "CURL_ERROR" "curl exit $curl_rc at $ALIYUN_STS_HOST"
+    return 0
+  fi
+
+  if [[ "$status" == "200" ]]; then
+    arn="$(json_field "$tmp" Arn)"
+    account="$(json_field "$tmp" AccountId)"
+    identity_type="$(json_field "$tmp" IdentityType)"
+    rm -f "$tmp"
+    printf "%-18s OK        %s (%s)%s\n" \
+      "Aliyun" "${arn:-account $account}" "${identity_type:-unknown identity}" \
+      "${arn:+  account: $account}"
+
+    # IdentityType tells you what a valid key is worth risking. A RAM user's key
+    # carries whatever policies it was given and can be revoked on its own; a root
+    # key IS the account -- it cannot be scoped, no policy limits it, and it can
+    # spend, delete and re-key everything in there. Both answer OK to this probe,
+    # which is exactly why the difference has to be printed rather than implied.
+    if [[ "$identity_type" == "Account" || "$arn" == *:root ]]; then
+      printf "%-18s   WARNING: root-account AccessKey. Unscopable, unlimited over account %s.\n" \
+        "" "$account"
+      printf "%-18s   Alibaba Cloud's own guidance: use a RAM user's key and delete this one.\n" ""
+    fi
+    return 0
+  fi
+
+  code="$(json_field "$tmp" Code)"
+  message="$(json_field "$tmp" Message)"
+  rm -f "$tmp"
+
+  # Unlike Webull, Alibaba Cloud says WHICH half is wrong, so pass its own word
+  # through instead of flattening every refusal into one "check your credentials".
+  case "$code" in
+    SignatureDoesNotMatch)
+      printf "%-18s FAIL      the key id exists; the SECRET (or the signing) is wrong\n" "Aliyun"
+      ;;
+    InvalidAccessKeyId.NotFound|InvalidAccessKeyId.Inactive)
+      printf "%-18s FAIL      %s -- the key ID itself is unknown or disabled\n" "Aliyun" "$code"
+      ;;
+    *)
+      print_test_result "Aliyun" "$status" "${code:-no code}${message:+: $message}"
+      ;;
+  esac
+  return 0
 }
 
 http_test_exa() {
@@ -1376,6 +1572,186 @@ http_test_litellm() {
   print_test_result "LiteLLM" "$status" "$base${detail:+: $detail}"
 }
 
+# --------------------------------------------------------------------------------
+# OPENBAO
+#
+# What goes wrong with a secret manager is not what goes wrong with an API key, so
+# this probe reports a different set of facts:
+#   - the SERVER can be sealed. /v1/sys/health needs no auth and encodes the state in
+#     its status code, so ask it first: reporting a sealed server as a bad token
+#     sends someone to rotate a credential that was never the problem.
+#   - the TOKEN expires. A service token with a fixed expire_time is a scheduled
+#     outage for everything that reads through it, so print the days left rather than
+#     a bare OK, and say so out loud under two weeks.
+#   - the POLICY may not grant what its name suggests. lookup-self returns policy
+#     NAMES, which is not the same as access, so also LIST the shared record path and
+#     report how many records the token can really see.
+# The token reaches curl through a 0600 config file, never argv, and is never printed.
+# --------------------------------------------------------------------------------
+BAO_RECORD_PATH="secret/metadata/shared/llm"
+
+# env -> Keychain -> ~/.api-keys-bao, so a machine already configured for
+# `pool --sync-bao` needs no second setup and either source alone is enough.
+bao_addr() {
+  local addr
+  addr="$(get_key_or_env BAO_ADDR 2>/dev/null || true)"
+  if [[ -z "$addr" ]]; then
+    pool_bao_config
+    addr="$POOL_BAO_ADDR"
+  fi
+  printf '%s' "${addr%/}"
+}
+
+bao_token() {
+  local token
+  token="$(get_key_or_env BAO_TOKEN 2>/dev/null || true)"
+  if [[ -z "$token" ]]; then
+    pool_bao_config
+    if [[ -n "$POOL_BAO_TOKEN_FILE" && -r "$POOL_BAO_TOKEN_FILE" ]]; then
+      token="$(tr -d '\r\n' <"$POOL_BAO_TOKEN_FILE")"
+    fi
+  fi
+  printf '%s' "$token"
+}
+
+# expire_time is RFC3339 carrying nanoseconds ("2026-09-13T04:17:04.109259215Z"),
+# which `date -j -f` will not parse -- cut the fraction and any zone suffix off.
+bao_days_left() {
+  local stamp="$1" epoch now
+  stamp="${stamp%%.*}"
+  stamp="${stamp%%Z*}"
+  stamp="${stamp%%+*}"
+  [[ -z "$stamp" ]] && return 1
+  epoch="$(TZ=UTC date -j -f '%Y-%m-%dT%H:%M:%S' "$stamp" '+%s' 2>/dev/null)" || return 1
+  now="$(date '+%s')"
+  printf '%d' "$(( (epoch - now) / 86400 ))"
+}
+
+http_test_openbao() {
+  local addr token cfg tmp status curl_rc detail
+  local version display policies expire days records state
+
+  addr="$(bao_addr)"
+
+  if [[ -z "$addr" ]]; then
+    printf "%-18s MISSING   no address saved (api_keys set bao_addr)\n" "OpenBao"
+    return 0
+  fi
+
+  tmp="$(mktemp)"
+  set +e
+  status="$(curl -sS -m 25 -o "$tmp" -w "%{http_code}" "$addr/v1/sys/health" 2>/dev/null)"
+  curl_rc=$?
+  set -e
+
+  if [[ "$curl_rc" -ne 0 ]]; then
+    rm -f "$tmp"
+    print_test_result "OpenBao" "CURL_ERROR" "curl exit $curl_rc at $addr"
+    return 0
+  fi
+
+  version="$(json_field "$tmp" version)"
+  rm -f "$tmp"
+
+  # The status code IS the state; the body would need a JSON bool parser to say the
+  # same thing less reliably.
+  case "$status" in
+    200) state="unsealed, active" ;;
+    429) state="unsealed, standby" ;;
+    472|473) state="unsealed, replication standby" ;;
+    501)
+      printf "%-18s FAIL      %s is not initialized\n" "OpenBao" "$addr"
+      return 0
+      ;;
+    503)
+      printf "%-18s SEALED    %s is sealed -- unseal it; no token can read it\n" \
+        "OpenBao" "$addr"
+      return 0
+      ;;
+    *)
+      print_test_result "OpenBao" "$status" "$addr/v1/sys/health"
+      return 0
+      ;;
+  esac
+
+  token="$(bao_token)"
+  if [[ -z "$token" ]]; then
+    printf "%-18s MISSING   %s is up (%s) but no token saved\n" \
+      "OpenBao" "$addr" "$state"
+    return 0
+  fi
+
+  cfg="$(mktemp)"
+  chmod 600 "$cfg"
+  printf 'header = "X-Vault-Token: %s"\n' "$token" >"$cfg"
+
+  tmp="$(mktemp)"
+  set +e
+  status="$(curl -sS -m 25 -o "$tmp" -w "%{http_code}" --config "$cfg" \
+    "$addr/v1/auth/token/lookup-self" 2>/dev/null)"
+  set -e
+
+  if [[ "$status" != "200" ]]; then
+    detail="$(api_error_message "$tmp")"
+    printf "%-18s FAIL      %s refused this token: HTTP %s%s\n" \
+      "OpenBao" "$addr" "$status" "${detail:+ ($detail)}"
+    rm -P "$cfg" "$tmp" 2>/dev/null || rm -f "$cfg" "$tmp"
+    return 0
+  fi
+
+  display="$(json_field "$tmp" display_name)"
+  expire="$(json_field "$tmp" expire_time)"
+  policies="$(grep -o '"policies"[[:space:]]*:[[:space:]]*\[[^]]*\]' "$tmp" | head -1 |
+    sed 's/.*\[//; s/\]//; s/"//g; s/,/, /g')" || true
+  rm -P "$tmp" 2>/dev/null || rm -f "$tmp"
+
+  # Policy names are a claim; a LIST is the evidence.
+  tmp="$(mktemp)"
+  set +e
+  status="$(curl -sS -m 25 -o "$tmp" -w "%{http_code}" --config "$cfg" \
+    -X LIST "$addr/v1/$BAO_RECORD_PATH" 2>/dev/null)"
+  set -e
+  rm -P "$cfg" 2>/dev/null || rm -f "$cfg"
+
+  if [[ "$status" == "200" ]]; then
+    records="$(grep -o '"keys"[[:space:]]*:[[:space:]]*\[[^]]*\]' "$tmp" | head -1 |
+      sed 's/.*\[//; s/\]//; s/"//g; s/,/, /g')" || true
+  else
+    records=""
+  fi
+  rm -P "$tmp" 2>/dev/null || rm -f "$tmp"
+
+  printf "%-18s OK        %s (v%s, %s)\n" "OpenBao" "$addr" "${version:-?}" "$state"
+  printf "%-18s   token %s, policies %s\n" "" "${display:-unnamed}" "${policies:-none}"
+
+  if [[ -n "$expire" ]]; then
+    if days="$(bao_days_left "$expire")"; then
+      if [[ "$days" -lt 0 ]]; then
+        printf "%-18s   EXPIRED %s -- every consumer of this token is already broken\n" \
+          "" "${expire%%T*}"
+      elif [[ "$days" -lt 14 ]]; then
+        printf "%-18s   expires %s, %s days left -- renew it before it strands its readers\n" \
+          "" "${expire%%T*}" "$days"
+      else
+        printf "%-18s   expires %s (%s days)\n" "" "${expire%%T*}" "$days"
+      fi
+    else
+      printf "%-18s   expires %s\n" "" "$expire"
+    fi
+  else
+    printf "%-18s   no expiry\n" ""
+  fi
+
+  if [[ -n "$records" ]]; then
+    printf "%-18s   reads %s: %s\n" "" "${BAO_RECORD_PATH#secret/metadata/}" "$records"
+  else
+    printf "%-18s   cannot LIST %s (HTTP %s) -- the token is valid but reads nothing there\n" \
+      "" "$BAO_RECORD_PATH" "$status"
+  fi
+
+  return 0
+}
+
 # Empty TEST_FILTER means "run everything"; otherwise it holds the space-delimited
 # env names selected on the command line.
 TEST_FILTER=""
@@ -1446,10 +1822,14 @@ cmd_test() {
   want TAVILY_API_KEY &&
     http_post_json_bearer "Tavily Search" "TAVILY_API_KEY" \
       "https://api.tavily.com/search" '{"query":"ping","max_results":1}'
+  want ALIBABA_CLOUD_ACCESS_KEY_ID ALIBABA_CLOUD_ACCESS_KEY_SECRET &&
+    http_test_aliyun
   want WEBULL_APP_KEY WEBULL_APP_SECRET &&
     http_test_webull
   want TAILSCALE_API_KEY TAILSCALE_AUTHKEY &&
     http_test_tailscale
+  want BAO_ADDR BAO_TOKEN &&
+    http_test_openbao
 
   report_shared_accounts
 
@@ -1637,7 +2017,11 @@ pool_cache_write() {
 
 # Where the shared secret manager lives is a property of one deployment, not of
 # this script, and this repository is public -- so nothing about it is hardcoded.
-# Set API_KEYS_BAO_ADDR / API_KEYS_BAO_TOKEN_FILE, or put them in ~/.api-keys-bao:
+# The first-class place for it is now the BAO_ADDR / BAO_TOKEN Keychain slots
+# (`api_keys set bao`), which is also what `api_keys test bao` checks. This file
+# stays supported for a token that must live outside the Keychain -- a shared or
+# root-owned deployment credential -- and for machines set up before those slots
+# existed. Env overrides both:
 #   addr=https://bao.example.internal
 #   token_file=~/.config/api_keys/bao-token
 POOL_BAO_CONFIG="${API_KEYS_BAO_CONFIG:-$HOME/.api-keys-bao}"
@@ -1702,19 +2086,21 @@ json_number() {
 # version, which is the rollback. Values and the token never reach argv or stdout.
 pool_sync_bao() {
   local base="$1" winner="$2" verdict="$3"
-  local record token cfg tmp body status version digest_local digest_remote
+  local record addr token cfg tmp body status version digest_local digest_remote
 
   record="$(pool_bao_record "$base")" || {
     printf 'pool: %s has no shared record; nothing to sync\n' "$base" >&2
     return 0
   }
 
-  pool_bao_config
+  # Same resolution as `test`: env, then the BAO_ADDR/BAO_TOKEN Keychain slots, then
+  # ~/.api-keys-bao. One place to configure the manager, whichever one you picked.
+  addr="$(bao_addr)"
+  token="$(bao_token)"
 
-  if [[ -z "$POOL_BAO_ADDR" || -z "$POOL_BAO_TOKEN_FILE" ]]; then
-    printf 'pool: no secret manager configured; set API_KEYS_BAO_ADDR and\n' >&2
-    printf '      API_KEYS_BAO_TOKEN_FILE, or write addr= / token_file= in %s\n' \
-      "$POOL_BAO_CONFIG" >&2
+  if [[ -z "$addr" ]]; then
+    printf 'pool: no secret manager configured; api_keys set bao_addr, or set\n' >&2
+    printf '      API_KEYS_BAO_ADDR, or write addr= in %s\n' "$POOL_BAO_CONFIG" >&2
     return 1
   fi
 
@@ -1724,21 +2110,20 @@ pool_sync_bao() {
     return 1
   fi
 
-  if [[ ! -r "$POOL_BAO_TOKEN_FILE" ]]; then
-    printf 'pool: no token at %s; %s not synced\n' "$POOL_BAO_TOKEN_FILE" "$record" >&2
+  if [[ -z "$token" ]]; then
+    printf 'pool: no OpenBao token (api_keys set bao_token); %s not synced\n' "$record" >&2
     return 1
   fi
 
   cfg="$(mktemp)"
   chmod 600 "$cfg"
   # curl --config keeps the bearer out of argv, where `ps` would show it.
-  printf 'header = "X-Vault-Token: %s"\n' \
-    "$(tr -d '\r\n' <"$POOL_BAO_TOKEN_FILE")" >"$cfg"
+  printf 'header = "X-Vault-Token: %s"\n' "$token" >"$cfg"
 
   tmp="$(mktemp)"
   set +e
   status="$(curl -sS -m 25 -o "$tmp" -w "%{http_code}" --config "$cfg" \
-    "$POOL_BAO_ADDR/v1/secret/data/shared/llm/$record" 2>/dev/null)"
+    "$addr/v1/secret/data/shared/llm/$record" 2>/dev/null)"
   set -e
 
   if [[ "$status" != "200" ]]; then
@@ -1769,7 +2154,7 @@ pool_sync_bao() {
   status="$(curl -sS -m 25 -o "$tmp" -w "%{http_code}" --config "$cfg" \
     -X PATCH -H "Content-Type: application/merge-patch+json" \
     --data-binary "@$body" \
-    "$POOL_BAO_ADDR/v1/secret/data/shared/llm/$record" 2>/dev/null)"
+    "$addr/v1/secret/data/shared/llm/$record" 2>/dev/null)"
   set -e
   rm -P "$body" 2>/dev/null || rm -f "$body"
 
@@ -1786,7 +2171,7 @@ pool_sync_bao() {
   tmp="$(mktemp)"
   set +e
   status="$(curl -sS -m 25 -o "$tmp" -w "%{http_code}" --config "$cfg" \
-    "$POOL_BAO_ADDR/v1/secret/data/shared/llm/$record" 2>/dev/null)"
+    "$addr/v1/secret/data/shared/llm/$record" 2>/dev/null)"
   set -e
   rm -P "$cfg" 2>/dev/null || rm -f "$cfg"
 

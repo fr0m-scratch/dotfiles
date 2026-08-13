@@ -15,6 +15,7 @@ MD="${1:?input markdown required}"
 OUT="${2:?output pdf required}"
 TITLE="${3:-}"; SUB="${4:-}"; DOCID="${5:-}"; VER="${6:-}"
 FOOTER="${FOOTER:-Draft}"
+AUTHOR="${AUTHOR:-}"
 
 # --- locate xelatex (TinyTeX install or system PATH) ----------------------
 for p in \
@@ -28,7 +29,11 @@ for p in \
 done
 
 command -v pandoc  >/dev/null || { echo "build_pdf: pandoc not found — install: brew install pandoc" >&2; exit 1; }
-command -v xelatex >/dev/null || { echo "build_pdf: xelatex not found — install TinyTeX (https://yihui.org/tinytex/) then: tlmgr install fvextra fancyhdr sectsty lineno footnotehyper xurl" >&2; exit 1; }
+# Engine override. Machines without TinyTeX often have tectonic, which fetches the packages
+# this header needs (xeCJK, fvextra, fancyhdr, sectsty, lineno, footnotehyper, xurl) on demand.
+# Default is unchanged; set PDF_ENGINE=tectonic to use it.
+PDF_ENGINE="${PDF_ENGINE:-xelatex}"
+command -v "$PDF_ENGINE" >/dev/null || { echo "build_pdf: $PDF_ENGINE not found — install TinyTeX (https://yihui.org/tinytex/) then: tlmgr install fvextra fancyhdr sectsty lineno footnotehyper xurl, or set PDF_ENGINE=tectonic" >&2; exit 1; }
 
 # --- fonts: pick the first installed candidate (override via env) ----------
 pick_font(){ for f in "$@"; do if fc-list 2>/dev/null | grep -qi "$f"; then echo "$f"; return; fi; done; echo "$1"; }
@@ -65,7 +70,12 @@ cat > "$HDR" <<EOF
 \\setlength{\\parindent}{0pt}
 EOF
 
-# Build a YAML metadata header (title/subtitle/date) then the body.
+# CJK docs: localize the TOC title to 目录 (when Han text is present)
+if perl -CSD -0777 -ne 'exit(/\p{Han}/?0:1)' "$MD" 2>/dev/null; then
+  printf '\\renewcommand{\\contentsname}{目录}\n' >> "$HDR"
+fi
+
+# Build a YAML metadata header (title/subtitle/author/date) then the body.
 DATELINE=""
 [ -n "$DOCID" ] && DATELINE="$DOCID"
 [ -n "$VER" ] && DATELINE="${DATELINE:+$DATELINE · }$VER"
@@ -73,13 +83,14 @@ DATELINE=""
   echo "---"
   [ -n "$TITLE" ] && echo "title: \"$TITLE\""
   [ -n "$SUB" ]   && echo "subtitle: \"$SUB\""
+  [ -n "$AUTHOR" ] && echo "author: \"$AUTHOR\""
   [ -n "$DATELINE" ] && echo "date: \"$DATELINE\""
   echo "---"
   echo
   cat "$MD"
 } > "$DOC"
 
-pandoc "$DOC" -o "$OUT" --pdf-engine=xelatex \
+pandoc "$DOC" -o "$OUT" --pdf-engine="$PDF_ENGINE" \
   -V geometry:a4paper,margin=2.4cm \
   -V fontsize=11pt -V colorlinks=false -V linkcolor=black -V urlcolor=black \
   --toc --toc-depth=2 --number-sections \

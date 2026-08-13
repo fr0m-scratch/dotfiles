@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+# rotom — open (or re-attach) the DGX Spark tmux session in which codex runs as
+# rotom-daemon@plantcore.ai (prolite).  The Pro account jamal.cao@plantcore.ai
+# lives in /root/.codex on the same box and is never touched here.
+#
+#   rotom            attach session "rotom" (created on first use)
+#   rotom side       attach/create a second session named "side"
+#   rotom -l         list the sessions that exist on the Spark
+#   rotom -k NAME    kill session NAME
+#
+# Inside the session CODEX_HOME is already exported, so plain `codex` is the
+# rotom-daemon account.  Detach with Ctrl-b d; the session and anything running
+# in it survive detach, ssh drops, and otty restarts.
+set -euo pipefail
+
+SSH=(ssh -o ServerAliveInterval=30 -o ServerAliveCountMax=6 dgx)
+
+case "${1-}" in
+  -l|--list)
+    exec "${SSH[@]}" 'tmux ls 2>&1 || echo "(no tmux server running)"'
+    ;;
+  -k|--kill)
+    [ $# -ge 2 ] || { echo "rotom: -k needs a session name" >&2; exit 2; }
+    exec "${SSH[@]}" "tmux kill-session -t '=${2}'"
+    ;;
+  -h|--help)
+    sed -n '2,14p' "$0" | cut -c3-
+    exit 0
+    ;;
+esac
+
+SESS="${1:-rotom}"
+case "$SESS" in
+  *[!A-Za-z0-9_-]*) echo "rotom: bad session name: $SESS" >&2; exit 2 ;;
+esac
+
+# Force a TERM the Spark's terminfo actually has; otty/Wave set exotic values
+# that make tmux bail with "missing or unsuitable terminal".
+exec "${SSH[@]}" -t "TERM=xterm-256color /usr/local/bin/rotom-tmux $SESS"

@@ -4,19 +4,222 @@
 #   Wave key                              -> otty key
 #   term:fontfamily "Maple Mono NF CN"    -> font-family
 #   term:fontsize   16                    -> font-size
-#   term:theme      "tokyonight"          -> theme  (custom, themes/tokyonight.ottytheme)
+#   term:theme      "tokyonight"          -> theme  (2026-07-18: now the BUILT-IN "Tokyo Night",
+#                                            not the user themes/tokyonight.ottytheme — see below)
 #   window:opacity  0.9                   -> background-opacity   (0.9 < 1.0 *is* the transparency;
 #   window:transparent true                  otty has no separate transparent flag)
+#   NOTE 2026-07-16: set to 1.0 (opaque). 0.9 forced WindowServer to real-time blend
+#   the terminal against everything behind it every redraw; on the Retina XDR
+#   (3456x2234) that pushed WindowServer to ~40% and Otty to ~30% CPU -> otty AND
+#   codex TUI felt laggy. Opaque removes the per-frame blend.
+#   NOTE 2026-07-17: value was STILL 0.9 (the 1.0 note above was never applied) and
+#   Otty kept hanging under codex's TUI redraws — NOW actually set to 1.0. CAUTION:
+#   ANY value < 1.0 (even 0.97) keeps the window non-opaque, so WindowServer must
+#   still blend it every frame — 0.97 does NOT meaningfully cut the cost. Only 1.0
+#   lets the compositor mark the surface opaque and skip the per-frame blend. If you
+#   want translucency back, accept that the per-frame compositing cost returns.
 #   app:tabbar      "top"                 -> window-layout = tabs-top
 #
 # Wave-only pieces NOT ported (no otty equivalent): blocks / AI panel / file-tree /
 # quota status bar / the `wave` VS Code-style layout function.
 
-font-family        = "Maple Mono NF CN"
-font-size          = 16
-theme              = "tokyonight"
+font-family = "Maple Mono NF CN"
+font-size = 15
+# 2026-07-18: was the USER theme "tokyonight" (a 530-byte file). Otty re-reads a
+# *user* theme from disk on EVERY render frame (load_user_theme -> read_to_string
+# -> open()), which showed up in 74% of hang-catcher dumps inside the render loop.
+# "Tokyo Night" (capitalized) is the BUILT-IN theme — compiled into the binary,
+# zero disk I/O per frame. Colors are identical: the full palette is inlined below,
+# so it overrides the theme's palette regardless.
+theme = "Tokyo Night"
 # otty can auto-switch themes by macOS appearance (auto-theme-dark-mode, off by default).
 # Wave has ONE theme regardless of appearance — pin the dark slot too so it's always Tokyo Night.
-theme-dark         = "tokyonight"
-background-opacity = 0.9
-window-layout      = "tabs-top"
+theme-dark = "Tokyo Night"
+# background-opacity = 1.0 (reset to default)
+# window-layout      = "tabs-top" (reset to default)
+
+# --- ★ Tab-switch "not responding" fix (2026-07-18) ★ -------------------------
+# TURNED OFF (was true). Symptom: every switch TO the codex tab froze Otty
+# "not responding" ~20s. The earlier comment here kept this ON to cut idle CPU
+# (7.3% -> 2.6%) — but that is exactly what CAUSES the switch stall:
+#
+#   Otty renders each terminal on the MAIN THREAD with no fps cap; codex's
+#   high-frequency full-screen TUI redraws peg that thread. With freeze ON, an
+#   inactive tab RELEASES its GPU surfaces (renderingFrozen); switching back must
+#   RECREATE them + full-repaint in one burst -> the 20s "not responding".
+#
+# otty's own docs say it verbatim: freeze-inactive-tab default = false,
+# "Off keeps tab switches smooth."
+#
+# EVIDENCE (2026-07-18):
+#  - hang-catcher corpus, 1077 dumps: 910 (85%) in renderAllPanes ->
+#    MetalPaneSurface.render (main-thread render); ~10-14% blocked in
+#    CAMetalLayer.nextDrawable() (GPU backpressure). Only 187 (17%) in the
+#    sidebar/lsof path the block below calls "THE actual fix".
+#  - Measured %CPU: codex tab frozen = 0.8-3%; the instant it's thawed (switched
+#    to) it jumps to a SUSTAINED ~28% and stays pinned.
+#
+# TRADE-OFF (accepted 2026-07-18): with freeze OFF, an agent (codex/claude) left
+# running in an UNFOCUSED tab keeps rendering (~28% CPU each) instead of ~0 while
+# frozen. Chose smooth switches over lower background CPU. If the Mac runs hot with
+# several background agents, set this back to true (accept the switch stall) or
+# close idle agent tabs.
+# freeze-inactive-tab = false (reset to default)
+
+# --- Sidebar lsof-on-main-thread fix (2026-07-17) -----------------------------
+# 2026-07-18 CORRECTION: this was labelled "THE actual fix" but it fixed only a
+# MINORITY of hangs (187/1077 dumps, ~17%). Real, worth keeping — but the dominant
+# cause is the main-thread render loop; see the freeze block above. Original note:
+#
+# PROVEN by catching the hang live (~/theOne/tools/otty/hang-catcher.py). At the
+# moment of the freeze, 91/91 main-thread samples — 100% — sat on ONE stack, and
+# all 29 captured dumps over 75+ continuous seconds were byte-identical:
+#
+#   _dispatch_main_queue_drain                        <- MAIN THREAD
+#    -> DetailsInfoView.refreshProcesses()            <- the SIDEBAR
+#       -> AgentRegistry.detect(under:)
+#          -> CodexAdapter.session(for:)
+#             -> CodexAdapter.sessionInfo(forOpenFilesOf:)
+#                -> ShellHelper.run(_:environment:timeout:)   <- spawns a shell
+#                   -> NSConcreteFileHandle readDataOfLength:
+#                      -> read()                     <- BLOCKED HERE
+#
+# The sidebar, to show each agent's session info, shells out to `lsof` (confirmed
+# in the binary's strings) ON THE MAIN THREAD for every agent pane and then
+# synchronously read()s its output. lsof is famously slow; with ~9 agent panes the
+# main thread is pinned for tens of seconds => macOS says "not responding".
+#
+# KEY INSIGHT: the hang shows busy=100% at cpu=0.0% — the main thread is BLOCKED
+# on I/O, not computing. That is why every CPU/GPU-side fix (background-opacity,
+# the 1.2.3 update, freeze-inactive-tab) changed nothing: wrong class of bug.
+#
+# A/B PROOF, same synthetic load (20s of spam in a --no-focus tab):
+#   sidebar-visible = true   -> main-thread busy peaked 100%, 29 hang dumps
+#   sidebar-visible = false  -> main-thread busy peaked  10.1%, 0 hang dumps
+#
+# Verified NOT to break session restore: resume_key stays populated in state.db
+# for every agent pane with the sidebar off.
+sidebar-visible = false
+
+# --- Session restore (added 2026-07-17) ---------------------------------------
+# `on-launch = restore_session` was ALREADY the default here, so tabs + names +
+# cwd already come back on relaunch. What was missing: session-restore-processes
+# was `none`, so the AGENT running in each tab did NOT come back — every tab
+# reopened as a bare shell and you had to re-run codex/claude by hand.
+#
+# Otty records `program_type` + `resume_key` per pane (state.db) and natively
+# understands codex / claude / opencode, so it can relaunch each agent with its
+# exact session id (`codex resume <uuid>` / `claude --resume <uuid>`) — i.e. the
+# real conversation, not a blank one.
+#
+# Mode is one of: none | whitelist | all.
+#   all       = relaunch whatever was running in EVERY pane. Rejected: it would
+#               also auto-re-run non-agent long commands (a dev server, a
+#               training job on dgx) on every restart — surprising + costly.
+#   whitelist = relaunch ONLY the programs listed below. Chosen.
+session-restore-processes = "whitelist"
+session-restore-process-allowlist = ["codex", "claude", "opencode"]
+# CAVEAT: panes whose resume_key was never captured (a plain `codex` launched
+# with no resume arg) relaunch as a FRESH codex, not the old thread. Fallback =
+# the per-tab session ids saved in ~/theOne/tools/otty/RESTORE-MAP.md, or just
+# run `codex resume` for the interactive picker.
+
+# --- ★ Memory blow-up / jetsam SIGKILL (2026-08-04) ★ -------------------------
+# ROOT CAUSE IS NOT A CONFIG SETTING. Recorded here because this file is where
+# the otty knowledge lives; the actual fix was in state.db.
+#
+# SYMPTOM: Otty PID 702 hit 9.13 GiB RSS and was SIGKILLed by jetsam, then could
+# not be reopened — every launch died ~40-60 s later. Otty's own log named it:
+#   CRASH AUDIT — unclean exit detected / previous PID: 702
+#   no macOS crash report found — probable SIGKILL (jetsam)
+#
+# CAUSE: a FILE-PREVIEW PANE, not a terminal. state.db pane
+# 9A66B6D3-41F3-4262-9C98-9A0B9C4BD86E was content_type=file, view_mode=preview,
+# content_url=file://.../edge-agent-profiling-suite/viz/flamegraph.html — 2.5 MiB
+# of HTML in 25 lines, ONE of them 2,630,250 characters long. Otty's preview
+# renderer has no bound on line length; a single multi-megabyte line drives it
+# superlinear. MEASURED on relaunch: 0.34 GiB at t+10 s -> 17.73 GiB at t+20 s
+# -> 19.76 GiB, pinned at 100% CPU on one core, with ZERO further log output and
+# ZERO PTY bytes written to any session log (so it is otty's own render path, not
+# child output). Timeline fits exactly: flamegraph.html written 14:27, the
+# preview pane created 14:28:35, PID 702 dead 14:34.
+#
+# WHY IT WOULD NOT REOPEN: the preview pane persists in state.db AND it was the
+# tab's `focused` pane, so every relaunch rendered it first thing and re-exploded
+# before the UI was usable. Self-perpetuating — the crash preserves its own cause.
+# Fixed by collapsing tab_19fcb67f807_64 back to a single terminal pane and
+# setting closed_at on the preview pane. Backup of the pre-fix db + the 5 live
+# agent resume_keys: ~/theOne/tools/otty/state-backup-20260804-143851/
+#
+# RULE: never open a generated flamegraph / bundled-HTML / minified artifact in
+# otty's preview pane. Those are single-giant-line files by construction. Use
+# `open -a Firefox <file>` (or /open, /check) for them. Checking first is cheap:
+#   awk '{if(length($0)>m)m=length($0)}END{print m}' file   # >100k chars = don't
+#
+# NOT the cause, ruled out with evidence — do not "fix" these again:
+#  - scrollback-lines. Default 10000 was never overridden. `grid_storage` logs
+#    show the cap holds (shrink_lines tops out ~10835) and every logged grid
+#    allocation over PID 702's whole 11-day life sums to 0.07 GiB. Left at default.
+#  - the sidebar / lsof main-thread stall (2026-07-17 block above). Different
+#    signature: that one is busy=100% at cpu=0.0% (blocked on I/O). This one is a
+#    real 100% CPU spin.
+#
+# SECONDARY (real, but not the OOM): crash recovery resurrected ZOMBIE windows.
+# The 07-24 jetsam left two window rows (55EC87EE / 426F9A85) holding 14 tabs
+# frozen at 2026-07-24 22:04 — all panes already closed_at, all program_type
+# empty. Every launch since logged
+#   crash recovery: rebuilt window with no window row from 3 tab(s)
+#   crash recovery: rebuilt window with no window row from 11 tab(s)
+# and respawned ~20 PTYs (15 SIGTERMed at each shutdown). Cleared: those 14 tabs
+# set to window_id=NULL, the two window rows deleted. KEY INSIGHT — a tab with a
+# window_id is restored even when all its panes are closed; an orphaned
+# (window_id NULL) tab is not. So every jetsam kill leaves behind a permanent,
+# self-reinforcing startup tax. Worth re-checking after any future hard kill:
+#   sqlite3 state.db "select window_id,count(*) from tab group by 1"
+
+foreground = "#c0caf5"
+background = "#1a1b26"
+palette-0 = "#15161e"
+palette-1 = "#f7768e"
+palette-2 = "#9ece6a"
+palette-3 = "#e0af68"
+palette-4 = "#7aa2f7"
+palette-5 = "#bb9af7"
+palette-6 = "#7dcfff"
+palette-7 = "#a9b1d6"
+palette-8 = "#414868"
+palette-9 = "#ff899d"
+palette-10 = "#9fe044"
+palette-11 = "#faba4a"
+palette-12 = "#8db0ff"
+palette-13 = "#c7a9ff"
+palette-14 = "#a4daff"
+palette-15 = "#c0caf5"
+cursor-color = "#b2b2b2"
+
+# window-layout = "tabs-bottom" (reset to default)
+
+# privilege-badge-agent-processing = false (reset to default)
+
+
+# privilege-resume-agent-session = false (reset to default)
+
+privilege-resume-agent-session = false
+
+privilege-badge-agent-processing = false
+
+privilege-badge-agent-task-complete = false
+
+privilege-badge-agent-awaiting-input = false
+
+detect-awaiting-input = false
+
+privilege-badge-activity = false
+
+privilege-notify-agent-task-complete = false
+
+privilege-notify-agent-awaiting-input = false
+
+sidebar-width = 336
+
+ipc-allow-send-keys = true

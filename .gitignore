@@ -9,3 +9,8 @@ claude/scripts/blocked-countries.sh
 
 # personal append-only build log (local only; embeds local paths)
 /AOL.md
+
+# installer/editor backups — regenerable noise, never publish
+*.bak
+*.bak.*
+*.bak-*

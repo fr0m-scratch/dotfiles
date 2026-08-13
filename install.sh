@@ -3,7 +3,7 @@
 #  dotfiles installer  ·  one TUI to download + configure a Mac
 # ----------------------------------------------------------------------------
 #  Two profiles:
-#    claude  — agent CLIs and shared Claude/Codex config, skills, hooks
+#    claude  — agent CLIs and shared Claude/Codex/Kimi config, skills, hooks
 #    full    — everything above + window mgmt + terminals + shell + bin
 #
 #  Usage:
@@ -226,6 +226,19 @@ link_codex(){
   link agents/codex/rules/default.rules "$HOME/.codex/rules/portable.rules"
   info "preserving mutable ~/.codex/config.toml and ~/.codex/hooks.json"
 }
+link_kimi(){
+  step "Linking Kimi Code source"
+  # Kimi mutates its live config with providers, models and OAuth state.
+  # Publish an immutable base beside it and leave the live file intact for
+  # an explicit, reviewable merge. Shared skills already reach Kimi through
+  # ~/.agents/skills (linked by link_codex).
+  link agents/kimi/config.toml "$HOME/.kimi-code/config.base.toml"
+  link agents/kimi/AGENTS.md "$HOME/.kimi-code/AGENTS.md"
+  for f in "$DOTFILES"/agents/kimi/hooks/*; do
+    link "agents/kimi/hooks/$(basename "$f")" "$HOME/.kimi-code/hooks/$(basename "$f")"
+  done
+  info "preserving mutable ~/.kimi-code/config.toml"
+}
 link_bin(){
   step "Linking ~/bin scripts"
   for f in "$DOTFILES"/bin/*; do link "bin/$(basename "$f")" "$HOME/bin/$(basename "$f")"; done
@@ -361,6 +374,7 @@ main(){
 
   link_claude
   link_codex
+  link_kimi
   link_bin               # api_keys + wave_focus + wm_* are useful in both profiles
   link_sources           # notion/lark read agents + notion-extract — useful in both profiles
 

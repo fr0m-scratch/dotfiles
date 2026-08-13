@@ -1,0 +1,250 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1860" height="1012" viewBox="0 0 1860 1012" font-family="PingFang SC, Helvetica Neue, Arial, sans-serif">
+  <defs>
+    <marker id="mgrey" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#55585E"/></marker>
+    <marker id="macc" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#0066CC"/></marker>
+    <marker id="mgreen" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#127A44"/></marker>
+    <marker id="mred" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#B5400C"/></marker>
+    <style>
+      .zl  { font-size: 14.5px; font-style: italic; fill: #55585E; font-weight: 500; }
+      .zla { font-size: 14.5px; font-style: italic; fill: #0A55CC; font-weight: 500; }
+      .bt  { font-size: 15px; font-weight: 600; fill: #1D1D1F; }
+      .bta { font-size: 15px; font-weight: 600; fill: #0A55CC; }
+      .btw { font-size: 15px; font-weight: 600; fill: #9A4A16; }
+      .ct  { font-size: 11.5px; font-weight: 600; fill: #1D1D1F; }
+      .br  { font-size: 11.5px; fill: #3A3D42; }
+      .bs  { font-size: 11px; fill: #55585E; }
+      .mn  { font-size: 10.5px; font-family: Menlo, monospace; fill: #3A3D42; }
+      .mna { font-size: 10.5px; font-family: Menlo, monospace; fill: #0A55CC; }
+      .mnr { font-size: 10.5px; font-family: Menlo, monospace; fill: #B5400C; }
+      .num { font-size: 11.5px; font-weight: 700; fill: #FFFFFF; }
+      .lg  { font-size: 11px; fill: #55585E; }
+      .ft  { font-size: 11px; fill: #6E6E73; }
+    </style>
+  </defs>
+  <rect width="1860" height="1012" fill="#FFFFFF"/>
+
+  <!-- ===== 信任边界 ===== -->
+  <rect x="16" y="14" width="1512" height="894" fill="none" stroke="#55585E" stroke-width="1.4" stroke-dasharray="9 5" rx="4"/>
+  <text class="zl" x="34" y="40">客户内网 · 单租户部署（平台节点无互联网默认路由）</text>
+  <text class="ft" x="34" y="58">本体内核、Agent 运行时与治理平面全部在内网；对外唯一出口 = 模型网关（右下）</text>
+
+  <!-- ===== T1 源系统 ===== -->
+  <rect x="36" y="76" width="1472" height="146" fill="#F6F7F9" stroke="#C9CCD1" stroke-width="1" rx="3"/>
+  <text class="zl" x="52" y="98">源系统 · 只读旁路（不改造）</text>
+
+  <rect x="54" y="108" width="346" height="96" fill="#FFFFFF" stroke="#55585E" stroke-width="1.1" rx="2"/>
+  <text class="bt" x="70" y="136">业务与生产系统</text>
+  <text class="mn" x="70" y="160">ERP · MES · WMS</text>
+  <text class="br" x="70" y="182">只读账号 · 日志级 CDC，不改造源系统</text>
+
+  <rect x="418" y="108" width="346" height="96" fill="#FFFFFF" stroke="#55585E" stroke-width="1.1" rx="2"/>
+  <text class="bt" x="434" y="136">工单与质量</text>
+  <text class="mn" x="434" y="160">REST · 消息队列</text>
+  <text class="br" x="434" y="182">工单状态流 · 故障与纠正记录</text>
+
+  <rect x="782" y="108" width="346" height="96" fill="#FFFFFF" stroke="#55585E" stroke-width="1.1" rx="2"/>
+  <text class="bt" x="798" y="136">设备时序</text>
+  <text class="mn" x="798" y="160">OPC UA · MQTT · Historian</text>
+  <text class="br" x="798" y="182">按点位订阅，不参与在线控制</text>
+
+  <rect x="1146" y="108" width="346" height="96" fill="#FFFFFF" stroke="#55585E" stroke-width="1.1" rx="2"/>
+  <text class="bt" x="1162" y="136">文档与非结构化</text>
+  <text class="mn" x="1162" y="160">对象存储 · 版本化抽取</text>
+  <text class="br" x="1162" y="182">图纸 · 规程 · 检修报告</text>
+
+  <path d="M227,222 L227,266" stroke="#55585E" stroke-width="1.8" fill="none" marker-end="url(#mgrey)"/>
+  <path d="M591,222 L591,266" stroke="#55585E" stroke-width="1.8" fill="none" marker-end="url(#mgrey)"/>
+  <path d="M955,222 L955,266" stroke="#55585E" stroke-width="1.8" fill="none" marker-end="url(#mgrey)"/>
+  <path d="M1319,222 L1319,266" stroke="#55585E" stroke-width="1.8" fill="none" marker-end="url(#mgrey)"/>
+
+  <!-- ===== T2 接入与语义映射 ===== -->
+  <rect x="36" y="266" width="1472" height="66" fill="#FFFFFF" stroke="#55585E" stroke-width="1.1" rx="2"/>
+  <text class="bt" x="56" y="296">接入与语义映射</text>
+  <text class="mn" x="200" y="296">bootstrap 全量 → 增量捕获（CDC / 游标）→ 幂等合并（主键 + 水位线）→ 对账 → 映射为 ObjectType / LinkType</text>
+  <text class="bs" x="56" y="318">质量不合格或对账差异 → 隔离区 DLQ，不带病入内核；每批记录 来源 · 批次号 · 账号 · 分级标签</text>
+
+  <path d="M772,332 L772,376" stroke="#0066CC" stroke-width="2" fill="none" marker-end="url(#macc)"/>
+  <circle cx="772" cy="354" r="10" fill="#0066CC"/>
+  <text class="num" x="772" y="358" text-anchor="middle">1</text>
+
+  <!-- ===== T3 本体内核 ===== -->
+  <rect x="36" y="376" width="1472" height="160" fill="#F3F8FE" stroke="#0066CC" stroke-width="1.1" rx="3"/>
+  <text class="zla" x="52" y="400">本体内核 · Ontology Kernel（只存语义、约束与出处，不复制业务事实的副本）</text>
+
+  <rect x="54" y="410" width="346" height="112" fill="#FFFFFF" stroke="#55585E" stroke-width="1.1" rx="2"/>
+  <text class="bt" x="70" y="438">对象与链接</text>
+  <text class="mna" x="70" y="462">ObjectType · LinkType · 属性契约</text>
+  <text class="br" x="70" y="484">跨源同一实体只有一个标识</text>
+  <text class="bs" x="70" y="506">冲突不静默合并，显式留待裁决</text>
+
+  <rect x="418" y="410" width="346" height="112" fill="#FFFFFF" stroke="#55585E" stroke-width="1.1" rx="2"/>
+  <text class="bt" x="434" y="438">动作与函数</text>
+  <text class="mna" x="434" y="462">Action · Function · 前置条件校验</text>
+  <text class="br" x="434" y="484">一切写回必须经过动作</text>
+  <text class="bs" x="434" y="506">不允许应用或 Agent 直连源库写入</text>
+
+  <rect x="782" y="410" width="346" height="112" fill="#FFFFFF" stroke="#55585E" stroke-width="1.1" rx="2"/>
+  <text class="bt" x="798" y="438">权限传播</text>
+  <text class="mna" x="798" y="462">RBAC / ABAC · 行列级</text>
+  <text class="br" x="798" y="484">权限随对象继承</text>
+  <text class="bs" x="798" y="506">应用与 Agent 不重复实现策略</text>
+
+  <rect x="1146" y="410" width="346" height="112" fill="#FFFFFF" stroke="#55585E" stroke-width="1.1" rx="2"/>
+  <text class="bt" x="1162" y="438">上下文投影</text>
+  <text class="mna" x="1162" y="462">本体切片 → 最小可喂集</text>
+  <text class="br" x="1162" y="484">带出处与版本号</text>
+  <text class="bs" x="1162" y="506">同一版本可复算，结果可比</text>
+
+  <!-- ===== 内核 ↔ 运行时 ===== -->
+  <path d="M640,580 L640,536" stroke="#0066CC" stroke-width="2" fill="none" marker-end="url(#macc)"/>
+  <circle cx="640" cy="558" r="10" fill="#0066CC"/>
+  <text class="num" x="640" y="562" text-anchor="middle">3</text>
+
+  <path d="M800,536 L800,580" stroke="#0066CC" stroke-width="2" fill="none" marker-end="url(#macc)"/>
+  <circle cx="800" cy="558" r="10" fill="#0066CC"/>
+  <text class="num" x="800" y="562" text-anchor="middle">4</text>
+
+  <path d="M325,580 L325,536" stroke="#0066CC" stroke-width="2" fill="none" marker-end="url(#macc)"/>
+  <circle cx="325" cy="558" r="10" fill="#0066CC"/>
+  <text class="num" x="325" y="562" text-anchor="middle">8</text>
+
+  <!-- ===== T4-B 应用与人 ===== -->
+  <rect x="36" y="580" width="390" height="192" fill="#F6F7F9" stroke="#C9CCD1" stroke-width="1" rx="3"/>
+  <text class="zl" x="52" y="604">应用与人 · 决策回写</text>
+
+  <rect x="54" y="616" width="170" height="136" fill="#FFFFFF" stroke="#55585E" stroke-width="1.1" rx="2"/>
+  <text class="bt" x="68" y="644">运营应用 / 看板</text>
+  <text class="mn" x="68" y="668">读本体当前态</text>
+  <text class="br" x="68" y="690">每条结论带出处</text>
+  <text class="bs" x="68" y="712">不复制后端事实</text>
+  <text class="bs" x="68" y="734">只读投影，可按角色定制</text>
+
+  <rect x="240" y="616" width="170" height="136" fill="#FFFFFF" stroke="#9A4A16" stroke-width="1.1" rx="2"/>
+  <text class="btw" x="254" y="644">人审门 · 默认拒绝</text>
+  <text class="mn" x="254" y="668">高影响动作必须人签</text>
+  <text class="br" x="254" y="690">阈值内动作可自动执行</text>
+  <text class="bs" x="254" y="712">拒绝 → 退回并留证据</text>
+  <text class="bs" x="254" y="734">决定本身也是一条事实</text>
+
+  <!-- ===== T4-A Agent 运行时 ===== -->
+  <rect x="486" y="580" width="560" height="192" fill="#F6F7F9" stroke="#C9CCD1" stroke-width="1" rx="3"/>
+  <text class="zl" x="502" y="604">Agent 运行时 · 受控执行</text>
+
+  <rect x="504" y="616" width="164" height="136" fill="#FFFFFF" stroke="#55585E" stroke-width="1.1" rx="2"/>
+  <text class="bt" x="518" y="644">规划与工具选择</text>
+  <text class="mn" x="518" y="668">计划 → 工具序列</text>
+  <text class="br" x="518" y="690">工具 = 本体动作投影</text>
+  <text class="bs" x="518" y="712">无自由 API 调用</text>
+  <text class="bs" x="518" y="734">只做规划，不直接写库</text>
+
+  <rect x="684" y="616" width="164" height="136" fill="#FFFFFF" stroke="#55585E" stroke-width="1.1" rx="2"/>
+  <text class="bt" x="698" y="644">执行沙箱</text>
+  <text class="mn" x="698" y="668">无出站网络 · 只读 FS</text>
+  <text class="br" x="698" y="690">超时 · 配额 · 限流</text>
+  <text class="bs" x="698" y="712">越权调用直接失败</text>
+  <text class="bs" x="698" y="734">沙箱内无长期凭据</text>
+
+  <rect x="864" y="616" width="164" height="136" fill="#FFFFFF" stroke="#55585E" stroke-width="1.1" rx="2"/>
+  <text class="bt" x="878" y="644">本地模型基线</text>
+  <text class="mn" x="878" y="668">本地权重 · L1–L2</text>
+  <text class="br" x="878" y="690">网关拒绝时的兜底</text>
+  <text class="bs" x="878" y="712">不依赖外部可用性</text>
+  <text class="bs" x="878" y="734">与网关同源分级判定</text>
+
+  <path d="M426,670 L486,670" stroke="#0066CC" stroke-width="2" fill="none" marker-end="url(#macc)"/>
+  <circle cx="456" cy="670" r="10" fill="#0066CC"/>
+  <text class="num" x="456" y="674" text-anchor="middle">2</text>
+
+  <path d="M486,730 L426,730" stroke="#0066CC" stroke-width="2" fill="none" marker-end="url(#macc)"/>
+  <circle cx="456" cy="730" r="10" fill="#0066CC"/>
+  <text class="num" x="456" y="734" text-anchor="middle">7</text>
+
+  <!-- ===== T4-C 模型网关 ===== -->
+  <rect x="1106" y="580" width="402" height="192" fill="#F6F7F9" stroke="#C9CCD1" stroke-width="1" rx="3"/>
+  <text class="zl" x="1122" y="604">模型网关 · 唯一出口</text>
+
+  <rect x="1124" y="616" width="366" height="136" fill="#F3F8FE" stroke="#0066CC" stroke-width="1.1" rx="2"/>
+  <text class="bta" x="1140" y="644">模型网关</text>
+  <text class="mna" x="1140" y="668">载荷分级 max() 判定</text>
+  <text class="br" x="1140" y="690">目的地白名单 · default-deny</text>
+  <text class="bs" x="1140" y="712">脱敏 · 限流 · 全量审计（WORM）</text>
+  <text class="mnr" x="1140" y="734">分级超限 → 不出网关，退回本地基线</text>
+
+  <path d="M1046,650 L1106,650" stroke="#0066CC" stroke-width="2" fill="none" marker-end="url(#macc)"/>
+  <circle cx="1076" cy="650" r="10" fill="#0066CC"/>
+  <text class="num" x="1076" y="654" text-anchor="middle">5</text>
+
+  <path d="M1106,700 L1046,700" stroke="#0066CC" stroke-width="2" fill="none" marker-end="url(#macc)"/>
+  <circle cx="1076" cy="700" r="10" fill="#0066CC"/>
+  <text class="num" x="1076" y="704" text-anchor="middle">6</text>
+
+  <path d="M1106,740 L1046,740" stroke="#B5400C" stroke-width="1.8" fill="none" marker-end="url(#mred)"/>
+
+  <!-- ===== 外部模型服务（边界之外） ===== -->
+  <text class="zl" x="1560" y="604">客户内网之外</text>
+  <rect x="1560" y="616" width="280" height="136" fill="#FFFFFF" stroke="#55585E" stroke-width="1.1" stroke-dasharray="6 4" rx="2"/>
+  <text class="bt" x="1576" y="644">外部模型服务（可选）</text>
+  <text class="mn" x="1576" y="668">仅接收已脱敏 · 已分级载荷</text>
+  <text class="br" x="1576" y="690">由客户在网关白名单中显式开启</text>
+  <text class="mnr" x="1576" y="714">× 平台节点无互联网默认路由</text>
+  <text class="bs" x="1576" y="736">唯一出站路径 = 模型网关</text>
+
+  <path d="M1490,690 L1560,690" stroke="#127A44" stroke-width="2" fill="none" marker-end="url(#mgreen)"/>
+
+  <!-- ===== 治理平面 ===== -->
+  <path d="M231,772 L231,824" stroke="#55585E" stroke-width="1.8" stroke-dasharray="6 4" fill="none" marker-end="url(#mgrey)"/>
+  <path d="M766,772 L766,824" stroke="#55585E" stroke-width="1.8" stroke-dasharray="6 4" fill="none" marker-end="url(#mgrey)"/>
+  <path d="M1307,772 L1307,824" stroke="#55585E" stroke-width="1.8" stroke-dasharray="6 4" fill="none" marker-end="url(#mgrey)"/>
+
+  <rect x="36" y="824" width="1472" height="68" fill="#EFF1F4" stroke="#C9CCD1" stroke-width="1" rx="3"/>
+  <text class="zl" x="52" y="848">治理平面 · Control Plane</text>
+
+  <rect x="272" y="834" width="292" height="46" fill="#FFFFFF" stroke="#C9CCD1" stroke-width="1" rx="2"/>
+  <text class="ct" x="286" y="854">血缘与出处</text>
+  <text class="mn" x="286" y="872">字段级 · 追溯到源系统与批次</text>
+
+  <rect x="580" y="834" width="292" height="46" fill="#FFFFFF" stroke="#C9CCD1" stroke-width="1" rx="2"/>
+  <text class="ct" x="594" y="854">权限与审计</text>
+  <text class="mn" x="594" y="872">统一策略 · WORM 审计日志</text>
+
+  <rect x="888" y="834" width="292" height="46" fill="#FFFFFF" stroke="#C9CCD1" stroke-width="1" rx="2"/>
+  <text class="ct" x="902" y="854">轨迹与评测</text>
+  <text class="mn" x="902" y="872">每步可回放 · 固定快照评测</text>
+
+  <rect x="1196" y="834" width="292" height="46" fill="#FFFFFF" stroke="#C9CCD1" stroke-width="1" rx="2"/>
+  <text class="ct" x="1210" y="854">版本与回滚</text>
+  <text class="mn" x="1210" y="872">本体版本 · 按快照回退</text>
+
+  <!-- ===== 编号路径 ===== -->
+  <circle cx="44" cy="930" r="8" fill="#0066CC"/><text class="num" x="44" y="934" text-anchor="middle">1</text>
+  <text class="br" x="60" y="934">语义化事实入内核</text>
+  <circle cx="408" cy="930" r="8" fill="#0066CC"/><text class="num" x="408" y="934" text-anchor="middle">2</text>
+  <text class="br" x="424" y="934">事件或人发起任务</text>
+  <circle cx="772" cy="930" r="8" fill="#0066CC"/><text class="num" x="772" y="934" text-anchor="middle">3</text>
+  <text class="br" x="788" y="934">请求本体切片（受权限约束）</text>
+  <circle cx="1136" cy="930" r="8" fill="#0066CC"/><text class="num" x="1136" y="934" text-anchor="middle">4</text>
+  <text class="br" x="1152" y="934">返回最小可喂集 + 出处</text>
+
+  <circle cx="44" cy="954" r="8" fill="#0066CC"/><text class="num" x="44" y="958" text-anchor="middle">5</text>
+  <text class="br" x="60" y="958">按分级送推理路由</text>
+  <circle cx="408" cy="954" r="8" fill="#0066CC"/><text class="num" x="408" y="958" text-anchor="middle">6</text>
+  <text class="br" x="424" y="958">结论与用量回执</text>
+  <circle cx="772" cy="954" r="8" fill="#0066CC"/><text class="num" x="772" y="958" text-anchor="middle">7</text>
+  <text class="br" x="788" y="958">提出动作提案（不直接执行）</text>
+  <circle cx="1136" cy="954" r="8" fill="#0066CC"/><text class="num" x="1136" y="958" text-anchor="middle">8</text>
+  <text class="br" x="1152" y="958">人签后经本体动作写回</text>
+
+  <!-- ===== 图例 ===== -->
+  <path d="M36,984 L64,984" stroke="#55585E" stroke-width="1.8" fill="none" marker-end="url(#mgrey)"/>
+  <text class="lg" x="78" y="988">结构性数据流</text>
+  <path d="M200,984 L228,984" stroke="#0066CC" stroke-width="2" fill="none" marker-end="url(#macc)"/>
+  <text class="lg" x="242" y="988">编号请求路径 1–8</text>
+  <path d="M400,984 L428,984" stroke="#55585E" stroke-width="1.8" stroke-dasharray="6 4" fill="none" marker-end="url(#mgrey)"/>
+  <text class="lg" x="442" y="988">控制 · 审计 · 异步回流</text>
+  <path d="M620,984 L648,984" stroke="#127A44" stroke-width="2" fill="none" marker-end="url(#mgreen)"/>
+  <text class="lg" x="662" y="988">分级校验通过 · 允许出站</text>
+  <path d="M840,984 L868,984" stroke="#B5400C" stroke-width="1.8" fill="none" marker-end="url(#mred)"/>
+  <text class="lg" x="882" y="988">拒绝出站 · 退回本地基线</text>
+  <rect x="1060" y="977" width="28" height="14" fill="none" stroke="#55585E" stroke-width="1.1" stroke-dasharray="6 4" rx="2"/>
+  <text class="lg" x="1102" y="988">虚线框 = 可选 / 条件存在</text>
+</svg>

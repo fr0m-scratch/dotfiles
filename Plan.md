@@ -1,11 +1,11 @@
 # Plan
 
 _Source of truth. Keep this the most up-to-date document at all times._
-_Last updated: 2026-06-19_
+_Last updated: 2026-08-13_
 
 ## Current Objective
-Maintain the reusable dotfiles repo (public, `dotfiles`). Latest: consolidated the
-Lark/飞书 + Notion read setup from `plantcore/sources` into `sources/`.
+Maintain the reusable dotfiles repo (public, `dotfiles`). Final file artifacts from
+Codex and Claude must be delivered to a Finder-visible folder, verified, and revealed.
 
 ## TODO
 - (none)
@@ -14,6 +14,13 @@ Lark/飞书 + Notion read setup from `plantcore/sources` into `sources/`.
 - (none)
 
 ## Done
+- [x] Added a global Codex and Claude delivery contract: copy every final file to
+      `~/Desktop/Deliverables/` (unless the user names another visible
+      folder), verify it exists, reveal it in Finder, and return that visible path.
+      **2026-08-13: folder renamed `PlantCore Deliverables` → `Deliverables`** (drop the
+      company prefix; the contract is machine-global, not company-scoped). Folder moved
+      with its 16 files; rule text updated in `claude/hooks/fr0m-rules.py` and
+      `agents/codex/AGENTS.md`. Past AOL entries keep the old path as history.
 - [x] **Information intake (`sources/`)** — captured how this machine reads Lark + Notion:
       canonical `sources/mcp.json` (Keychain self-fetch, secret-free), `@notion-agent` +
       `@lark-agent` subagents, the Notion local-cache extractor (`notion-extract`), plus
@@ -51,6 +58,9 @@ Lark/飞书 + Notion read setup from `plantcore/sources` into `sources/`.
   Karabiner (`__HOME__`) and `.gitconfig` (name/email). Decided for reproducibility.
 
 ## Requirement Change Log
+- 2026-08-13: New requirement — install the `blitz` skill (parallel subagent implementation optimized purely for wall-clock) on Claude Code, Codex and Kimi Code, adapted per agent. DONE: three runtime dialects under `claude/skills/blitz`, `agents/codex/skills/blitz`, `agents/kimi/skills/blitz`, symlinked into `~/.claude/skills`, `~/.codex/skills`, `~/.kimi-code/skills`; each verified live in its own runtime and validated with `quick_validate.py`. Also corrected `agents/README.md`: Codex 0.147.0 discovers skills only under `$CODEX_HOME/skills`, so the 20 shared skills in `~/.agents/skills` are invisible to it (bulk relink deferred to the user).
+- 2026-08-12: Final files from Codex and Claude must always be discoverable in Finder;
+  repository or hidden-directory paths alone no longer count as delivery.
 - 2026-06-09: Initial requirement — package the machine's personalization into a reusable,
   self-installing public dotfiles repo with a TUI installer, detailed docs, and an
   HTML cheatsheet; build via multiple workflows; push to GitHub.

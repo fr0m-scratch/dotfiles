@@ -1,0 +1,137 @@
+{
+  "title": "3 · Core Code: Stable Kernel, Evolvable Harness",
+  "purpose": "Show a model-portable agent runtime in which versioned vertical profiles and evolvable harness modules communicate through a stable semantic ABI, every real-world effect and durable event remains under a small Effect Kernel, and governed evidence can change the active runtime only through conformance, independent evaluation, canary, signed release, registry activation, and named rollback.",
+  "caption": "Freeze authority. Evolve policy. Keep every model replaceable.",
+  "canvas": {
+    "aspect": "16:9 landscape",
+    "background": "warm near-white paper with generous safe margins"
+  },
+  "style": {
+    "medium": "conference-paper hand-drawn architecture diagram with thin imperfect marker lines, flat boxes, restrained detail, and highly legible English labels",
+    "palette": "charcoal ink; red learned specialization and optional training; blue semantic runtime and model portability; green effect authority and hard constraints; purple governed optimization and release"
+  },
+  "zones": [
+    {"id": "learned_specialization", "label": "LEARNED SPECIALIZATION · EVOLVABLE", "tone": "red"},
+    {"id": "stable_semantics", "label": "STABLE SEMANTIC RUNTIME", "tone": "blue"},
+    {"id": "effect_authority", "label": "TRUST + EFFECT AUTHORITY", "tone": "green"},
+    {"id": "portability", "label": "MODEL PORTABILITY", "tone": "blue"},
+    {"id": "optimizer", "label": "CONSTRAINED OPTIMIZER · OFFLINE", "tone": "purple"},
+    {"id": "post_training", "label": "OPTIONAL POST-TRAINING", "tone": "red"}
+  ],
+  "nodes": [
+    {"id": "vertical_profiles", "label": "Versioned Vertical Profiles", "zone": "learned_specialization", "kind": "profile-set"},
+    {"id": "evolvable_harness", "label": "Evolvable Harness Modules", "zone": "learned_specialization", "kind": "versioned-module-plane"},
+
+    {"id": "semantic_abi", "label": "Stable Semantic ABI", "zone": "stable_semantics", "kind": "typed-interface"},
+    {"id": "execution_ir", "label": "Canonical Execution IR", "zone": "stable_semantics", "kind": "versioned-execution-ir"},
+
+    {"id": "effect_kernel", "label": "Effect Kernel", "zone": "effect_authority", "kind": "authority-kernel"},
+    {"id": "event_log", "label": "Append-Only Event Log", "zone": "effect_authority", "kind": "immutable-event-store"},
+    {"id": "hard_constraints", "label": "Hard Constraints", "zone": "effect_authority", "kind": "policy-and-release-gate"},
+
+    {"id": "model_adapter_matrix", "label": "Model + Physical Adapter Matrix", "zone": "portability", "kind": "replaceable-model-adapter-set"},
+    {"id": "conformance_gate", "label": "Model Conformance Gate", "zone": "portability", "kind": "compatibility-gate"},
+    {"id": "environment_adapters", "label": "Tool / Environment Adapters + Sandboxes", "zone": "portability", "kind": "sandboxed-effect-plane"},
+
+    {"id": "observe", "label": "1 · Observe", "zone": "optimizer", "kind": "governed-evidence-ingestion"},
+    {"id": "diagnose", "label": "2 · Diagnose", "zone": "optimizer", "kind": "failure-taxonomy-and-credit"},
+    {"id": "propose", "label": "3 · Propose", "zone": "optimizer", "kind": "typed-patch-producer"},
+    {"id": "evaluate", "label": "4 · Independent Evaluate", "zone": "optimizer", "kind": "replay-heldout-security-gate"},
+    {"id": "canary", "label": "5 · Shadow + Canary", "zone": "optimizer", "kind": "guarded-rollout-gate"},
+    {"id": "signed_release", "label": "6 · Signed Release Tuple", "zone": "optimizer", "kind": "immutable-runtime-artifact"},
+    {"id": "runtime_registry", "label": "Runtime Registry", "zone": "optimizer", "kind": "version-and-rollback-registry"},
+    {"id": "active_runtime", "label": "Active Runtime Version", "zone": "optimizer", "kind": "released-runtime-selection"},
+    {"id": "rollback_controller", "label": "Guarded Rollback", "zone": "optimizer", "kind": "known-good-reactivation-controller"},
+
+    {"id": "stable_residuals", "label": "Stable Residual Errors", "zone": "post_training", "kind": "cross-harness-error-set"},
+    {"id": "post_train", "label": "Post-Train / Distill", "zone": "post_training", "kind": "optional-weight-update"},
+    {"id": "model_candidate", "label": "New Model Candidate", "zone": "post_training", "kind": "unreleased-model-version"},
+    {"id": "runtime_recalibration", "label": "Recalibrate Runtime", "zone": "post_training", "kind": "adapter-context-verifier-recalibration"}
+  ],
+  "edges": [
+    {"id": "CC-01", "from": "active_runtime", "to": "vertical_profiles", "label": "activate released profile versions + pinned tuple", "tone": "purple", "style": "dashed"},
+    {"id": "CC-02", "from": "vertical_profiles", "to": "evolvable_harness", "label": "compile task distribution + policy, tool, eval, memory, and cost-risk references", "tone": "red", "style": "solid"},
+    {"id": "CC-03", "from": "evolvable_harness", "to": "semantic_abi", "label": "TaskEnvelope + ArtifactRef + typed module outputs", "tone": "red", "style": "solid"},
+    {"id": "CC-04", "from": "semantic_abi", "to": "evolvable_harness", "label": "ContextRequest + typed runtime inputs", "tone": "blue", "style": "dashed"},
+    {"id": "CC-05", "from": "semantic_abi", "to": "execution_ir", "label": "TaskEnvelope + ContextPacket reference + constrained receipts", "tone": "blue", "style": "solid"},
+    {"id": "CC-06", "from": "execution_ir", "to": "semantic_abi", "label": "ContextRequest + ToolIntent + EffectProposal", "tone": "blue", "style": "solid"},
+    {"id": "CC-07", "from": "semantic_abi", "to": "effect_kernel", "label": "typed intent or proposal + pinned versions", "tone": "green", "style": "solid"},
+    {"id": "CC-08", "from": "effect_kernel", "to": "semantic_abi", "label": "EffectReceipt + ArtifactRef or typed deny, cancel, and recovery event", "tone": "green", "style": "solid"},
+
+    {"id": "CC-09", "from": "execution_ir", "to": "model_adapter_matrix", "label": "semantic inference request + released adapter selection", "tone": "blue", "style": "solid"},
+    {"id": "CC-10", "from": "model_adapter_matrix", "to": "execution_ir", "label": "decoded model events + candidate semantic actions", "tone": "blue", "style": "solid"},
+    {"id": "CC-11", "from": "model_adapter_matrix", "to": "conformance_gate", "label": "candidate model-adapter pair for action, trace, safety, and recovery tests", "tone": "blue", "style": "dashed"},
+
+    {"id": "CC-12", "from": "hard_constraints", "to": "effect_kernel", "label": "identity, capability, permission, budget, idempotency, and commit invariants", "tone": "green", "style": "solid"},
+    {"id": "CC-13", "from": "effect_kernel", "to": "environment_adapters", "label": "authorized invocation + scoped capability + deadline + idempotency key", "tone": "green", "style": "solid"},
+    {"id": "CC-14", "from": "environment_adapters", "to": "effect_kernel", "label": "tool result, error, and external EffectReceipt", "tone": "green", "style": "solid"},
+    {"id": "CC-15", "from": "effect_kernel", "to": "event_log", "label": "APPEND · EventEnvelope + policy decision + receipt + provenance", "tone": "green", "style": "solid"},
+    {"id": "CC-16", "from": "event_log", "to": "effect_kernel", "label": "REPLAY · session events + checkpoint references; never re-execute effects", "tone": "blue", "style": "dashed"},
+
+    {"id": "CC-17", "from": "event_log", "to": "observe", "label": "governed trace handles + costs + latency + risk + human outcome", "tone": "purple", "style": "dashed"},
+    {"id": "CC-18", "from": "observe", "to": "diagnose", "label": "version-bound observation batch", "tone": "purple", "style": "solid"},
+    {"id": "CC-19", "from": "diagnose", "to": "propose", "label": "failure taxonomy + node, edge, context, verifier, and recovery credit", "tone": "purple", "style": "solid"},
+    {"id": "CC-20", "from": "propose", "to": "evaluate", "label": "typed HarnessPatch + required evals + policy impact + rollback plan", "tone": "purple", "style": "solid"},
+    {"id": "CC-21", "from": "hard_constraints", "to": "evaluate", "label": "safety + permission + regression + cost + latency + high-risk human-approval gates", "tone": "green", "style": "solid"},
+    {"id": "CC-22", "from": "conformance_gate", "to": "evaluate", "label": "model-adapter compatibility manifest + explicit failures", "tone": "blue", "style": "solid"},
+    {"id": "CC-23", "from": "evaluate", "to": "diagnose", "label": "FAIL · replay, held-out, robustness, security, or compatibility evidence", "tone": "red", "style": "dashed"},
+    {"id": "CC-24", "from": "evaluate", "to": "canary", "label": "PASS · signed eval manifest + bounded candidate tuple", "tone": "purple", "style": "solid"},
+    {"id": "CC-25", "from": "canary", "to": "signed_release", "label": "PASS · promote canary-approved runtime artifact", "tone": "purple", "style": "solid"},
+    {"id": "CC-26", "from": "canary", "to": "rollback_controller", "label": "FAIL · regression or budget breach", "tone": "red", "style": "dashed"},
+    {"id": "CC-27", "from": "signed_release", "to": "runtime_registry", "label": "register immutable release tuple + module hashes + rollback_target", "tone": "purple", "style": "solid"},
+    {"id": "CC-28", "from": "runtime_registry", "to": "active_runtime", "label": "activate named signed tuple", "tone": "purple", "style": "solid"},
+    {"id": "CC-29", "from": "observe", "to": "rollback_controller", "label": "production regression, incident, or policy breach", "tone": "red", "style": "dashed"},
+    {"id": "CC-30", "from": "rollback_controller", "to": "runtime_registry", "label": "reactivate previous known-good signed rollback_target", "tone": "red", "style": "dashed"},
+
+    {"id": "CC-31", "from": "evaluate", "to": "stable_residuals", "label": "persistent errors reproduced across multiple harness candidates", "tone": "red", "style": "dashed"},
+    {"id": "CC-32", "from": "stable_residuals", "to": "post_train", "label": "curated permission-cleared trajectories + reward evidence", "tone": "red", "style": "dashed"},
+    {"id": "CC-33", "from": "post_train", "to": "model_candidate", "label": "new weights + training lineage", "tone": "red", "style": "dashed"},
+    {"id": "CC-34", "from": "model_candidate", "to": "runtime_recalibration", "label": "new model requires adapter, context, verifier, and error-taxonomy recalibration", "tone": "red", "style": "dashed"},
+    {"id": "CC-35", "from": "runtime_recalibration", "to": "conformance_gate", "label": "candidate model + adapter + harness matrix", "tone": "red", "style": "dashed"}
+  ],
+  "forbidden_edges": [
+    {"from": "observe", "to": "vertical_profiles", "reason": "Observe may read governed evidence but cannot update a profile before evaluation and signed release."},
+    {"from": "propose", "to": "evolvable_harness", "reason": "A HarnessPatch is an isolated candidate; Propose cannot mutate the running harness."},
+    {"from": "evaluate", "to": "active_runtime", "reason": "Evaluation cannot activate a candidate without canary, signed release, and registry activation."},
+    {"from": "canary", "to": "active_runtime", "reason": "Canary success still requires a signed release tuple and registry activation."},
+    {"from": "signed_release", "to": "active_runtime", "reason": "Every release must enter the Runtime Registry before activation."},
+    {"from": "model_adapter_matrix", "to": "environment_adapters", "reason": "Models and physical model adapters never invoke real tools or environments directly."},
+    {"from": "execution_ir", "to": "environment_adapters", "reason": "Execution IR emits typed intents and proposals; only the Effect Kernel owns invocation."},
+    {"from": "semantic_abi", "to": "environment_adapters", "reason": "ToolIntent and EffectProposal are not effect authority."},
+    {"from": "evolvable_harness", "to": "environment_adapters", "reason": "No learned module may bypass capability checks and effect commit."},
+    {"from": "model_adapter_matrix", "to": "effect_kernel", "reason": "Model output must be decoded into Execution IR and stable ABI contracts before reaching the kernel."},
+    {"from": "evolvable_harness", "to": "effect_kernel", "reason": "Harness modules must communicate through the stable semantic ABI."},
+    {"from": "environment_adapters", "to": "execution_ir", "reason": "External results and receipts must return through the Effect Kernel."},
+    {"from": "model_adapter_matrix", "to": "event_log", "reason": "Models cannot write durable evidence directly; Event Commit belongs to the Effect Kernel."},
+    {"from": "evolvable_harness", "to": "event_log", "reason": "Learned modules cannot append or rewrite durable evidence outside kernel event commit."},
+    {"from": "event_log", "to": "propose", "reason": "Optimizer proposals require governed observation and diagnosis, not direct raw-log access."},
+    {"from": "event_log", "to": "post_train", "reason": "Raw private traces cannot enter training without governance, residualization, curation, and permission checks."},
+    {"from": "post_train", "to": "runtime_registry", "reason": "New weights must pass runtime recalibration, conformance, evaluation, canary, and signed release."},
+    {"from": "model_candidate", "to": "active_runtime", "reason": "An unreleased model candidate cannot become active."},
+    {"from": "rollback_controller", "to": "signed_release", "reason": "Rollback selects an existing known-good tuple; it does not mint a new release."}
+  ],
+  "layout_notes": [
+    "Use a layered central stack: versioned profiles and evolvable harness at the top; the narrow Stable Semantic ABI above Canonical Execution IR; the Effect Kernel and Append-Only Event Log centered on the trust boundary; model portability and sandboxed environments below.",
+    "Place the optional post-training chain on the far left and the constrained optimizer, release, registry, active version, and rollback path on the far right.",
+    "Draw CC-03/CC-04, CC-05/CC-06, CC-07/CC-08, CC-09/CC-10, CC-13/CC-14, and CC-15/CC-16 in visibly separate request and response lanes; never merge a pair into one line.",
+    "Make CC-15 APPEND the primary event direction and CC-16 REPLAY a separate dashed reverse lane with no visual suggestion that replay re-executes an external effect.",
+    "Route CC-17 from the Event Log to Observe through a visibly governed read corridor; it must not resemble direct optimizer write access to the log.",
+    "Reserve one outer perimeter lane for evaluation failure back to Diagnose, canary or production failure to Guarded Rollback, and Guarded Rollback to the named registry target.",
+    "Show Hard Constraints as an independent authority feeding both the Effect Kernel and Independent Evaluate, never as an optimizer-owned module.",
+    "Keep Stable Semantic ABI, Effect Kernel, Append-Only Event Log, Hard Constraints, evaluator integrity, and registry authority visibly outside the optimizer search surface.",
+    "Show the Model + Physical Adapter Matrix as replaceable candidates; only a registry-pinned pair that passed Model Conformance Gate may be selected by the active runtime.",
+    "Use braces, bands, or inset text for component inventories and ownership; do not invent arrows between contained items."
+  ],
+  "required_text": [
+    "Profiles: Coding · Finance · Support · Research",
+    "Harness: Context · Memory · Tool Surface · Model Router · Topology · Scheduler · Verifier · Recovery · Escalation",
+    "ABI: TaskEnvelope · ContextRequest · ToolIntent · EffectProposal · ArtifactRef",
+    "Kernel: Identity · Capability Check · Event Commit · Effect Commit · Version Registry · Kill / Rollback",
+    "Adapters: Patch · Replace · JSON / Function Call · Token Protocol",
+    "Models: Open A · Open B · Frontier · Local",
+    "Release Tuple: model_id + runtime_id + adapter_id + context_snapshot + policy_id + eval_suite_id",
+    "Rollback Target: previous known-good signed tuple",
+    "No model or learned module bypasses the Effect Kernel.",
+    "Training is optional. Evaluation is mandatory."
+  ]
+}

@@ -1,0 +1,4 @@
+interface:
+  display_name: "System Paper Architecture ImageGen"
+  short_description: "Generate systems-paper figures with audited arrows"
+  default_prompt: "Use $system-paper-architecture-imagegen to turn this system description into a presentation-ready raster architecture figure with an audited directed-edge ledger."

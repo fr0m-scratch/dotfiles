@@ -1,0 +1,132 @@
+{
+  "title": "2 · Organization Context Lake",
+  "purpose": "Show governed read, slow learning, and separately authorized effect paths: raw evidence is append-only, materialized views are rebuildable, ContextPacket returns only to agent reasoning, and every real-world effect passes a capability broker and executor.",
+  "caption": "A Context Lake compiles governed experience; it does not dump history into a prompt.",
+  "canvas": {
+    "aspect": "16:9 landscape",
+    "background": "warm near-white paper with generous outer safe margins"
+  },
+  "style": {
+    "medium": "conference-paper hand-drawn architecture diagram with thin imperfect marker lines and highly legible English labels",
+    "palette": "warm near-white paper; charcoal ink; red slow learning; blue authorized serving; green governance and effects"
+  },
+  "zones": [
+    {"id": "edge", "label": "EDGE INTERACTION", "tone": "blue"},
+    {"id": "learning", "label": "LEARNING PATH · SLOW WRITE", "tone": "red"},
+    {"id": "governance", "label": "GOVERNANCE SPINE", "tone": "green"},
+    {"id": "serving", "label": "SERVING PATH · AUTHORIZED READ", "tone": "blue"},
+    {"id": "effects", "label": "EFFECT PATH · TRUST BOUNDARY", "tone": "green"}
+  ],
+  "nodes": [
+    {"id": "human_session", "label": "Human Session", "zone": "edge", "kind": "actor and approval source"},
+    {"id": "edge_agent", "label": "Edge Coding Agent", "zone": "edge", "kind": "primary human-facing reasoning loop"},
+    {"id": "vertical_agents", "label": "Vertical Agents", "zone": "edge", "kind": "Finance · Support · Ops; scoped delegates"},
+    {"id": "context_gateway", "label": "Context Gateway", "zone": "edge", "kind": "separate read and write admission ports"},
+
+    {"id": "typed_traces", "label": "Typed Traces + Outcomes", "zone": "learning", "kind": "events · artifacts · receipts · MemoryCandidate only"},
+    {"id": "raw_pool", "label": "Immutable Raw Pool", "zone": "learning", "kind": "append-only source of truth"},
+    {"id": "memory_foundry", "label": "Memory Foundry", "zone": "learning", "kind": "extract · dedupe · resolve · redact · induce"},
+    {"id": "offline_eval", "label": "Offline Eval + External Verify", "zone": "learning", "kind": "independent verification"},
+    {"id": "promotion_gate", "label": "Promotion Gate", "zone": "learning", "kind": "scoped policy-controlled promotion"},
+    {"id": "canary", "label": "Canary", "zone": "learning", "kind": "guarded activation"},
+    {"id": "rollback", "label": "Rollback", "zone": "learning", "kind": "known-good view version"},
+
+    {"id": "governance_spine", "label": "Governance Spine", "zone": "governance", "kind": "ACL / ReBAC · provenance · retention · revocation · audit · policy version"},
+    {"id": "revocation_event", "label": "Revocation Event", "zone": "governance", "kind": "tombstone · deletion scope · handle revocation"},
+    {"id": "lineage_recompute", "label": "Lineage-Aware Recompute", "zone": "governance", "kind": "invalidate · rebuild derived state"},
+
+    {"id": "governed_views", "label": "Governed Materialized Views + Index", "zone": "serving", "kind": "Episode · Temporal Fact · Procedure · Artifact · Eval · Index"},
+    {"id": "context_compiler", "label": "Context Compiler", "zone": "serving", "kind": "authorize · route · retrieve · reconcile · rerank · compress · cite · budget"},
+    {"id": "context_packet", "label": "ContextPacket", "zone": "serving", "kind": "policy · procedure · evidence · state; provenance · contradictions · missingness · policy decision · expiry"},
+
+    {"id": "capability_broker", "label": "Capability Broker", "zone": "effects", "kind": "fresh authorization · short-lived scoped capability"},
+    {"id": "effect_executor", "label": "Effect Executor", "zone": "effects", "kind": "credential proxy · idempotent effect commit"},
+    {"id": "external_systems", "label": "External Systems", "zone": "effects", "kind": "repository · database · cloud · messaging"}
+  ],
+  "edges": [
+    {"id": "CL-01", "from": "human_session", "to": "edge_agent", "label": "intent + constraints + consent / approval", "tone": "blue", "style": "solid"},
+    {"id": "CL-02", "from": "edge_agent", "to": "vertical_agents", "label": "scoped TaskEnvelope + context handles", "tone": "blue", "style": "dashed"},
+    {"id": "CL-03", "from": "vertical_agents", "to": "edge_agent", "label": "proposal + ArtifactRef + evidence + ActionRequest", "tone": "blue", "style": "solid"},
+
+    {"id": "CL-04", "from": "edge_agent", "to": "context_gateway", "label": "ContextRequest + principal + purpose + scope", "tone": "blue", "style": "solid"},
+    {"id": "CL-05", "from": "context_gateway", "to": "governance_spine", "label": "pre-retrieval authorization request", "tone": "green", "style": "dashed"},
+    {"id": "CL-06", "from": "governance_spine", "to": "context_gateway", "label": "policy decision + allowed scope + filters + expiry", "tone": "green", "style": "solid"},
+    {"id": "CL-07", "from": "context_gateway", "to": "context_compiler", "label": "admitted query + policy decision", "tone": "blue", "style": "solid"},
+    {"id": "CL-08", "from": "context_compiler", "to": "governed_views", "label": "authorized RetrievalPlan + memory snapshot", "tone": "blue", "style": "dashed"},
+    {"id": "CL-09", "from": "governed_views", "to": "context_compiler", "label": "eligible records + lineage + temporal metadata", "tone": "blue", "style": "solid"},
+    {"id": "CL-10", "from": "context_compiler", "to": "context_packet", "label": "minimum typed authorized context", "tone": "blue", "style": "solid"},
+    {"id": "CL-11", "from": "context_packet", "to": "context_gateway", "label": "structured packet + provenance + expiry", "tone": "blue", "style": "solid"},
+    {"id": "CL-12", "from": "context_gateway", "to": "edge_agent", "label": "authorized ContextPacket", "tone": "blue", "style": "solid"},
+
+    {"id": "CL-13", "from": "edge_agent", "to": "context_gateway", "label": "typed trace / ArtifactRef / MemoryCandidate submission", "tone": "red", "style": "dashed"},
+    {"id": "CL-14", "from": "context_gateway", "to": "typed_traces", "label": "admitted event + tenant + retention + audit labels", "tone": "red", "style": "solid"},
+    {"id": "CL-15", "from": "effect_executor", "to": "typed_traces", "label": "effect result + outcome + receipt", "tone": "red", "style": "dashed"},
+    {"id": "CL-16", "from": "typed_traces", "to": "raw_pool", "label": "append raw evidence", "tone": "red", "style": "solid"},
+    {"id": "CL-17", "from": "raw_pool", "to": "memory_foundry", "label": "evidence refs + lineage + policy labels", "tone": "red", "style": "solid"},
+    {"id": "CL-18", "from": "memory_foundry", "to": "offline_eval", "label": "MemoryCandidate only", "tone": "red", "style": "solid"},
+    {"id": "CL-19", "from": "offline_eval", "to": "promotion_gate", "label": "independent verifier receipt + eval result", "tone": "red", "style": "solid"},
+    {"id": "CL-20", "from": "promotion_gate", "to": "governance_spine", "label": "scoped promotion authorization request", "tone": "green", "style": "dashed"},
+    {"id": "CL-21", "from": "governance_spine", "to": "promotion_gate", "label": "policy version + allow / deny + retention", "tone": "green", "style": "solid"},
+    {"id": "CL-22", "from": "promotion_gate", "to": "canary", "label": "verified candidate + scope + rollback target", "tone": "red", "style": "solid"},
+    {"id": "CL-23", "from": "canary", "to": "governed_views", "label": "PASS · activate scoped version", "tone": "red", "style": "solid"},
+    {"id": "CL-24", "from": "canary", "to": "rollback", "label": "FAIL / regression", "tone": "red", "style": "dashed"},
+    {"id": "CL-25", "from": "rollback", "to": "governed_views", "label": "restore known-good view version", "tone": "red", "style": "dashed"},
+
+    {"id": "CL-26", "from": "revocation_event", "to": "lineage_recompute", "label": "tombstone + affected lineage + scope", "tone": "green", "style": "solid"},
+    {"id": "CL-27", "from": "lineage_recompute", "to": "governed_views", "label": "invalidate / rebuild derived views and index", "tone": "green", "style": "dashed"},
+    {"id": "CL-28", "from": "revocation_event", "to": "context_compiler", "label": "fail-closed filter for future packets", "tone": "green", "style": "dashed"},
+    {"id": "CL-29", "from": "revocation_event", "to": "capability_broker", "label": "revoke outstanding capability handles", "tone": "green", "style": "dashed"},
+
+    {"id": "CL-30", "from": "edge_agent", "to": "capability_broker", "label": "proposed ToolIntent / EffectProposal", "tone": "ink", "style": "solid"},
+    {"id": "CL-31", "from": "capability_broker", "to": "governance_spine", "label": "fresh effect authorization request", "tone": "green", "style": "dashed"},
+    {"id": "CL-32", "from": "governance_spine", "to": "capability_broker", "label": "short-lived scoped capability / deny", "tone": "green", "style": "solid"},
+    {"id": "CL-33", "from": "capability_broker", "to": "effect_executor", "label": "approved action + capability handle", "tone": "green", "style": "solid"},
+    {"id": "CL-34", "from": "effect_executor", "to": "external_systems", "label": "scoped idempotent effect call", "tone": "green", "style": "solid"},
+    {"id": "CL-35", "from": "external_systems", "to": "effect_executor", "label": "typed result + observation + receipt", "tone": "green", "style": "solid"},
+    {"id": "CL-36", "from": "effect_executor", "to": "edge_agent", "label": "result / denial / commit receipt", "tone": "green", "style": "solid"}
+  ],
+  "forbidden_edges": [
+    {"from": "context_packet", "to": "external_systems", "reason": "ContextPacket is read context and never effect authority"},
+    {"from": "context_packet", "to": "capability_broker", "reason": "read context cannot originate an effect authorization request"},
+    {"from": "context_packet", "to": "effect_executor", "reason": "a context packet cannot request or commit an effect"},
+    {"from": "context_compiler", "to": "capability_broker", "reason": "the read compiler cannot originate an action"},
+    {"from": "context_compiler", "to": "effect_executor", "reason": "the read compiler cannot bypass the broker or enter effect execution"},
+    {"from": "governance_spine", "to": "context_packet", "reason": "effect re-authorization belongs at the capability path, not at packet output"},
+    {"from": "raw_pool", "to": "context_packet", "reason": "raw evidence must pass governed views and context compilation"},
+    {"from": "raw_pool", "to": "edge_agent", "reason": "raw evidence never flows directly into an agent prompt"},
+    {"from": "raw_pool", "to": "governed_views", "reason": "raw evidence cannot bypass foundry, independent eval, promotion, and canary"},
+    {"from": "memory_foundry", "to": "promotion_gate", "reason": "the component producing a candidate cannot skip independent verification"},
+    {"from": "offline_eval", "to": "governed_views", "reason": "verified candidates still require promotion scope and canary"},
+    {"from": "promotion_gate", "to": "context_gateway", "reason": "promotion cannot write directly to prompt output"},
+    {"from": "rollback", "to": "raw_pool", "reason": "rollback selects a known-good derived version and never rewrites raw evidence"},
+    {"from": "context_gateway", "to": "governed_views", "reason": "queries cannot bypass authorization and Context Compiler routing"},
+    {"from": "governed_views", "to": "edge_agent", "reason": "serving views cannot bypass Context Compiler and Context Gateway"},
+    {"from": "vertical_agents", "to": "capability_broker", "reason": "vertical agents return proposed actions to the Edge Coding Agent"},
+    {"from": "edge_agent", "to": "effect_executor", "reason": "all effects require a fresh broker authorization"},
+    {"from": "capability_broker", "to": "external_systems", "reason": "the broker grants capability but the executor owns effect commit"},
+    {"from": "external_systems", "to": "governed_views", "reason": "new observations return to typed traces, never promoted memory"},
+    {"from": "effect_executor", "to": "governed_views", "reason": "effect results must enter append-only traces before learning"}
+  ],
+  "layout_notes": [
+    "Place Edge Interaction on the far left, Learning across the upper middle, Governance as a horizontal spine, Serving across the lower middle, and Effects on the far right.",
+    "Draw CL-04 and CL-13 as visibly separated read-request and trace-submission lanes into distinct ports of Context Gateway.",
+    "Route CL-05 with CL-06, CL-20 with CL-21, and CL-31 with CL-32 as separated request and decision lanes with no shared trunk.",
+    "Route CL-08 retrieval request and CL-09 record response in separated parallel lanes between Context Compiler and Governed Materialized Views + Index.",
+    "Route CL-34 effect call and CL-35 result response in separated lanes across the trust boundary.",
+    "Return CL-11 and CL-12 to the Edge Coding Agent through a blue outer corridor that never touches the effect path.",
+    "Place Offline Eval, Promotion Gate, Canary, and Rollback as explicit consecutive gates above the governed views.",
+    "Place Revocation Event and Lineage-Aware Recompute below the governance spine with clear targets at views, compiler, and broker.",
+    "Draw the trust boundary as containment around Capability Broker and Effect Executor; the boundary itself is never an arrow endpoint."
+  ],
+  "required_text": [
+    "identity · tenant · scope · consent · budget",
+    "ACL / ReBAC · Provenance · Retention · Revocation · Audit · Policy Version",
+    "AUTHORIZE → ROUTE → RETRIEVE → RECONCILE → RERANK → COMPRESS → CITE → BUDGET",
+    "Episode · Temporal Fact · Procedure · Artifact · Eval · Index",
+    "policy · procedure · evidence · state",
+    "provenance · contradictions · missingness · policy decision · expiry",
+    "event_time · valid_time · observed_at",
+    "Agent writes MemoryCandidate only",
+    "NO AMBIENT CREDENTIALS"
+  ]
+}

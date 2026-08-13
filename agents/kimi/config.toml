@@ -1,0 +1,22 @@
+# Safe base layer for ~/.kimi-code/config.toml. Kimi Code mutates its live
+# config with providers, models and OAuth state, so deployment must merge
+# this file with the live config instead of overwriting it.
+#
+# yolo matches the Claude Code bypassPermissions / Codex approval_policy=never
+# baseline: tool calls are auto-approved; the agent may still ask questions.
+default_permission_mode = "yolo"
+
+# fr0m governance guard: blocks AI co-author/generated-by commit trailers,
+# AOL.md rewrites, and agent edits to an existing Principal.md.
+[[hooks]]
+event = "PreToolUse"
+matcher = "Bash|Edit|Write"
+command = "python3 \"$HOME/.kimi-code/hooks/fr0m_guard.py\""
+timeout = 10
+
+# fr0m governance reminder: injects the standing rules when the working tree
+# contains a Principal.md. Silent everywhere else.
+[[hooks]]
+event = "UserPromptSubmit"
+command = "python3 \"$HOME/.kimi-code/hooks/fr0m_rules.py\""
+timeout = 10
